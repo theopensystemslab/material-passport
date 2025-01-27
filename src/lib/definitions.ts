@@ -1,0 +1,1 @@
+// define types to be returned from Airtable base here

@@ -1,4 +1,4 @@
-# material-passport
+# material-passports
 
 Track your WikiHouse blocks all the way home!
 
