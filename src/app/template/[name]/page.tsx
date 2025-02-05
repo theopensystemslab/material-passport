@@ -1,6 +1,6 @@
 export default async function Component({
   params,
-  searchParams,
+  // searchParams,
 }: {
   params: Promise<{ name: string }>
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
