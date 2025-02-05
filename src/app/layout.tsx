@@ -11,8 +11,8 @@ const interSans = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Material Passports",
-  description: "An app written in Next.js",
+  title: "Component Passports",
+  description: "Track your WikiHouse blocks all the way home",
 };
 
 export default function RootLayout({

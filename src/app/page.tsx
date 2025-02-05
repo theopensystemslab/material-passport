@@ -8,7 +8,7 @@ export default function Splash({
   return (
     <>
       <h1>
-        Material Passports
+        Component Passports
       </h1>
       <h2>
         An app written in Next.js
