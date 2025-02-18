@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { getAirtableDb, getRecordIdByField } from "@/helpers/airtable";
@@ -38,8 +39,8 @@ export default async function Page({
     component = await db.get(componentsTable, recordId)
     console.debug(`Fetched component ${component.componentUID} from Airtable`)
   } catch (error) {
-    console.error("Error fetching component", error)
-    return <p>Error fetching component</p>
+    console.error(`Error fetching component ${uid}:`, error)
+    notFound()
   }
 
   return (

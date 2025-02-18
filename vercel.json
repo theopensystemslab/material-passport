@@ -1,8 +1,6 @@
 {
-  "crons": [
-    {
-      "path": "/src/app/api/airtable/collect-orders",
-      "schedule": "*/15 * * * *"
-    }
-  ]
+  "crons": [{
+    "path": "/src/app/api/airtable/collect-orders",
+    "schedule": "*/15 * * * *"
+  }]
 }

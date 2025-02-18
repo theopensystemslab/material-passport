@@ -1,3 +1,6 @@
+// import { type NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
+
 import { getAirtableDb } from "@/helpers/airtable"
 import { componentsTable, OrderBaseTable, Component, OrderBase } from "@/lib/schema"
 import { ComponentStatus } from "@/lib/definitions"
@@ -8,8 +11,13 @@ const COMPONENT_STATUSES_TO_IGNORE = new Set([
   ComponentStatus.DesignInProgress,
 ])
 
-// by using PUT we indicate that this route is idempotent (i.e. can be run freely without side effects)
-export async function PUT() {
+// route has to be GET to be triggered by the cron job (POST/PUT would be more appropriate)
+// export async function GET(req: NextRequest): Promise<Response> {
+export async function GET(): Promise<Response> {
+  // guard against unauthorised triggering of this hook
+  // if (req.headers.get('Authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
+  //   return new NextResponse("Unauthorized", { status: 401 });
+  // }
   try {
     const db = getAirtableDb()
     const orders: OrderBase[] = await db.scan(OrderBaseTable)
@@ -49,19 +57,19 @@ export async function PUT() {
 
     // response status code should indicate whether anything was actually created
     if (ordersSynced > 0) {
-      return Response.json(
+      return NextResponse.json(
         { message: `Synced ${ordersSynced} orders from ${OrderBaseTable.name} to ${componentsTable.name} table` },
         { status: 201 },
       );
     } else {
-      return Response.json(
+      return NextResponse.json(
         { message: `No action: ${OrderBaseTable.name} is already synced with ${componentsTable.name} table` },
         { status: 204 },
       );
     }
   } catch (error) {
     console.error(`Failed to sync orders in ${OrderBaseTable.name} to ${componentsTable.name} table:`, error);
-    return Response.json(
+    return NextResponse.json(
         { error: `Failed to synchronise ${OrderBaseTable.name} with ${componentsTable.name} table` },
         { status: 500 },
     );
