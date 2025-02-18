@@ -25,10 +25,11 @@ export const getRawAirtableBase = (baseId: string | undefined = ""): Airtable.Ba
   return new Airtable({apiKey: process.env.AIRTABLE_API_KEY}).base(baseId)
 }
 
+// FIXME: this function does not reliably return correct record ID!
 export const getRecordIdByField = async (
   tableId: string,
   fieldId: string,
-  value: any,
+  value: string | number,
   baseId: string | undefined = undefined,
 ): Promise<string> => {
   console.debug(`Searching for record in table ${tableId} with field ${fieldId} matching ${value}`)

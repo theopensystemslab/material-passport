@@ -37,13 +37,12 @@ export async function PUT() {
       }
       // create the new record(s)
       for (let i = 0; i < order.quantity; i++) {
-        let newComponentRecord = await db.insert(componentsTable, newRecordData);
-        recordsCreated++;
+        const newComponentRecord = await db.insert(componentsTable, newRecordData);
         console.debug(`Record ${i + 1} of ${order.quantity} created with ID: ${newComponentRecord.id}`);
-        console.log(newComponentRecord)
+        recordsCreated++;
       }
-      ordersSynced++;
       console.log(`Successfully created ${order.quantity} new component records from order ${order.orderRef}`);
+      ordersSynced++;
     }
     console.log(`Successfully synced ${ordersSynced} orders, creating ${recordsCreated} new component records`);
     console.debug(`Ignored ${ordersIgnored} orders due to them not yet being '${ComponentStatus.ReadyForProduction}' or later in their lifecycle`);
