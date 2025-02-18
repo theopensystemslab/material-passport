@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "src/app/api/airtable/collect-orders",
+      "schedule": "*/15 * * * *" // runs every 15 minutes
+    }
+  ]
+}
