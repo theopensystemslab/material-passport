@@ -1,6 +1,7 @@
+import { unstable_cache as cache } from "next/cache"
 import { PHASE_PRODUCTION_BUILD } from "next/constants";
 import { notFound } from "next/navigation";
-import { cache, Suspense } from "react";
+import { Suspense } from "react";
 
 import {
   getAirtableDb,
@@ -11,19 +12,15 @@ import { componentsTable, type Component } from "@/lib/schema";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { isNotNil } from "es-toolkit";
 
-// forcing pages to be generated at request time for now
-export const dynamic = "force-dynamic"
+// we use ISR to generate static passports at build and fetch fresh data at request time as needed
+export const revalidate = 60;
 
-// TODO: use generateStaticParams, revalidation and ISR to generate static passports at build and update as needed
-// export const dynamicParams = true
-// export const revalidate = 900
+// we cache the scan to reduce requests to Airtable's API and avoid being throttled at build time
+const getCachedTable = cache(scanTable, [], { revalidate: 60 });
 
-// we use React's cache to reduce scans of the component table / avoid being throttled by Airtable's API
-const cachedScan = cache(scanTable);
-
-// if enabled, this runs once, at build time, to prepare static pages for every component
+// this runs once, at build time, to prepare static pages for every component
 export async function generateStaticParams(): Promise<{ uid: string }[]> {
-  const components = (await cachedScan(componentsTable)) as Component[];
+  const components = (await getCachedTable(componentsTable)) as Component[];
   // ignore any records without UID (none should exist anyway)
   return components
     .filter((component) => isNotNil(component.componentUID))
@@ -40,20 +37,16 @@ export default async function Page({
   const { uid } = await params;
 
   let component: Component | undefined;
-  // if generating at build time, use cached scan of components table
   if (process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD) {
-    console.log("PHASE PRODUCTION BUILD!");
-    const components = (await cachedScan(componentsTable)) as Component[];
-    // if component not found in cached scan, return 404
+    // if generating at build time, use cached scan of components table
+    const components = (await getCachedTable(componentsTable)) as Component[];
     component = components.find((component) => component.componentUID === uid);
     if (component === undefined) {
-      console.warn(`No component with UID == ${uid} found in table:`);
+      console.warn(`No component with UID ${uid} found in table:`);
       notFound();
     }
-    console.debug(`Found component ${uid} in data`);
+    console.debug(`Found component ${uid} in full table data`);
   } else {
-    // if generating at request time, fetch the component from Airtable
-    console.log("PHASE DEVELOPMENT / PRODUCTION SERVER!");
     try {
       const db = getAirtableDb();
       if (!componentsTable.mappings) {
@@ -67,9 +60,9 @@ export default async function Page({
         uid
       );
       if (!recordId) {
-        throw new Error(`Failed to find record ID for component ${uid}`);
+        throw new Error(`Failed to fetch record ID for component ${uid}`);
       }
-      console.debug(`Found record ID ${recordId} for component ${uid}`);
+      console.debug(`Fetched record ID ${recordId} for component ${uid}`);
       component = await db.get(componentsTable, recordId);
       if (!component) {
         throw new Error(

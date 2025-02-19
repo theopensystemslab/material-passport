@@ -17,6 +17,7 @@ export const getAirtableDb = (): AirtableTs => {
 
 export const scanTable = async (table: Table<Item>): Promise<Item[]> => {
   const db = getAirtableDb()
+  console.debug(`Scanning table: ${table.name}`)
   return await db.scan(table)
 }
 
