@@ -1,5 +1,5 @@
-// import { type NextRequest, NextResponse } from "next/server"
-import { NextResponse } from "next/server"
+import "server-only"
+import { type NextRequest, NextResponse } from "next/server"
 
 import { getAirtableDb } from "@/helpers/airtable"
 import { componentsTable, OrderBaseTable, Component, OrderBase } from "@/lib/schema"
@@ -11,13 +11,12 @@ const COMPONENT_STATUSES_TO_IGNORE = new Set([
   ComponentStatus.DesignInProgress,
 ])
 
-// route has to be GET to be triggered by the cron job (POST/PUT would be more appropriate)
-// export async function GET(req: NextRequest): Promise<Response> {
-export async function GET(): Promise<Response> {
+// route has to be GET to be triggerable the cron job (POST/PUT would be more appropriate)
+export async function GET(req: NextRequest): Promise<Response> {
   // guard against unauthorised triggering of this hook
-  // if (req.headers.get('Authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
-  //   return new NextResponse("Unauthorized", { status: 401 });
-  // }
+  if (req.headers.get('Authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
+    return new NextResponse("Unauthorized", { status: 401 });
+  }
   try {
     const db = getAirtableDb()
     const orders: OrderBase[] = await db.scan(OrderBaseTable)
@@ -49,11 +48,13 @@ export async function GET(): Promise<Response> {
         console.debug(`Record ${i + 1} of ${order.quantity} created with ID: ${newComponentRecord.id}`);
         recordsCreated++;
       }
+      // finally, mark the order as synced to avoid duplicating records on next run
+      await db.update(OrderBaseTable, { id: order.id, isSynced: true });
       console.log(`Successfully created ${order.quantity} new component records from order ${order.orderRef}`);
       ordersSynced++;
     }
     console.log(`Successfully synced ${ordersSynced} orders, creating ${recordsCreated} new component records`);
-    console.debug(`Ignored ${ordersIgnored} orders due to them not yet being '${ComponentStatus.ReadyForProduction}' or later in their lifecycle`);
+    console.debug(`Ignored ${ordersIgnored} orders due to being earlier than '${ComponentStatus.ReadyForProduction}' in lifecycle`);
 
     // response status code should indicate whether anything was actually created
     if (ordersSynced > 0) {
