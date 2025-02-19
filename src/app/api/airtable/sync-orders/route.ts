@@ -6,8 +6,12 @@ import { componentsTable, OrderBaseTable, Component, OrderBase } from "@/lib/sch
 import { ComponentStatus } from "@/lib/definitions"
 import { getComponentStatusEnum } from "@/helpers/utils"
 
+// allow function 120s to run to completion (default is 15 on Pro acct, max is 300)
+export const maxDuration = 120;
+// ensure that this route is not cached
+export const dynamic = "force-dynamic";
+
 const COMPONENT_STATUSES_TO_IGNORE = new Set([
-  ComponentStatus.Feasibility,
   ComponentStatus.DesignInProgress,
 ])
 
@@ -35,10 +39,9 @@ export async function GET(req: NextRequest): Promise<Response> {
         continue;
       }
       console.debug(`Syncing order ${order.orderRef} (${order.id}) with status ${status}`);
-      // grab essential data from Order base record to populate new record(s) in Components table
+      // grab id and status from Order base record to populate new record(s) in Components table
       // NB. most fields in Components are lookups to Order base, so don't need to be included here
       const newRecordData: Partial<Component> = {
-        componentName: order.componentName,
         orderBase: [ order.id ],
         status: order.status,
       }

@@ -1,6 +1,6 @@
 {
   "crons": [{
-    "path": "/src/app/api/airtable/collect-orders",
+    "path": "/api/airtable/sync-orders",
     "schedule": "*/15 * * * *"
   }]
 }

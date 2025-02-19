@@ -1,8 +1,6 @@
-// define types here
-
 // this enum of possible statuses is non-exhaustive for the moment, and naming may not be final
+// any change here should also be reflected in the companion lookup logic in /helpers/utils.ts
 export enum ComponentStatus {
-  Feasibility = "Feasibility", // not in miro, but in dummy data
   DesignInProgress = "Design in progress",
   ReadyForProduction = "Ready for production", // aka. ReadyForManufacture (as per the miro)
   Manufactured = "Manufactured",
