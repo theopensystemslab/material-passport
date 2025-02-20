@@ -69,9 +69,6 @@ importers:
       '@types/react-dom':
         specifier: ^19.0.3
         version: 19.0.3(@types/react@19.0.8)
-      airtable-ts-codegen:
-        specifier: ^1.2.0
-        version: 1.2.0
       eslint:
         specifier: ^9.20.1
         version: 9.20.1(jiti@2.4.2)
@@ -284,9 +281,6 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.25':
     resolution: {integrity: sha512-vNk6aEwybGtawWmy/PzwnGDOjCkLWSD2wqvjGGAgOAwCGWySYXfYoxt00IJkTF+8Lb57DwOb3Aa0o9CApepiYQ==}
-
-  '@kristiandupont/recase@1.4.0':
-    resolution: {integrity: sha512-73wONbV4OhCCs7wKytDNKY0VMw5GbzdiqeovViockpBbKy7GYLdqoT/8T80jptn/E3HccEV1oJ33cSw6/ggIlg==}
 
   '@next/env@15.1.6':
     resolution: {integrity: sha512-d9AFQVPEYNr+aqokIiPLNK/MTyt3DWa/dpKveiAaVccUadFbhFEvY6FXYX2LJO2Hv7PHnLBu2oWwB4uBuHjr/w==}
@@ -614,10 +608,6 @@ packages:
     engines: {node: '>=0.4.0'}
     hasBin: true
 
-  airtable-ts-codegen@1.2.0:
-    resolution: {integrity: sha512-ohzr86Db4VUP51LW0Rilv7zIehCFPtRluXXtmr2+MN6bhtKUELV2uJeeWQDH1zkl3OqijehQ2BW7/ZUDfe05uQ==}
-    hasBin: true
-
   airtable-ts@1.4.0:
     resolution: {integrity: sha512-MvqJHwTtWlfjf/EY7z2cFD+G8nPFUyzf19zCcbuZyYbZ3QEKidJN5wF/o6ANcgQccQPItLib5Pb7wr8e1+BcLQ==}
 
@@ -879,9 +869,6 @@ packages:
   detect-libc@2.0.3:
     resolution: {integrity: sha512-bwy0MGW55bG41VqxxypOsdSdGqLwXPI/focwgTYCFMbdUiBAxLg9CFzG08sz2aqzknwiX7Hkl0bQENjg8iLByw==}
     engines: {node: '>=8'}
-
-  diacritics@1.3.0:
-    resolution: {integrity: sha512-wlwEkqcsaxvPJML+rDh/2iS824jbREk6DUMUKkEaSlxdYHeS43cClJtsWglvw2RfeXGm6ohKDqsXteJ5sP5enA==}
 
   didyoumean@1.2.2:
     resolution: {integrity: sha512-gxtyfqMg7GKyhQmb056K7M3xszy/myH8w+B4RT+QXBQsvAOdc3XymqDDPHx1BgPgsdAA5SIifona89YtRATDzw==}
@@ -1689,9 +1676,6 @@ packages:
   queue-microtask@1.2.3:
     resolution: {integrity: sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A==}
 
-  ramda@0.30.1:
-    resolution: {integrity: sha512-tEF5I22zJnuclswcZMc8bDIrwRHRzf+NqVEmqg50ShAZMP7MWeR/RGDthfM/p+BlqvF2fXAzpn8i+SJcYD3alw==}
-
   react-dom@19.0.0:
     resolution: {integrity: sha512-4GV5sHFG0e/0AD4X+ySy6UJd3jVl1iNsNHdpad0qhABJ11twS3TTBnseqsKurKcsNqCEFeGL3uLpVChpIO3QfQ==}
     peerDependencies:
@@ -2207,10 +2191,6 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
 
-  '@kristiandupont/recase@1.4.0':
-    dependencies:
-      ramda: 0.30.1
-
   '@next/env@15.1.6': {}
 
   '@next/eslint-plugin-next@15.1.6':
@@ -2505,14 +2485,6 @@ snapshots:
       acorn: 8.14.0
 
   acorn@8.14.0: {}
-
-  airtable-ts-codegen@1.2.0:
-    dependencies:
-      '@kristiandupont/recase': 1.4.0
-      axios: 1.7.9
-      diacritics: 1.3.0
-    transitivePeerDependencies:
-      - debug
 
   airtable-ts@1.4.0:
     dependencies:
@@ -2816,8 +2788,6 @@ snapshots:
 
   detect-libc@2.0.3:
     optional: true
-
-  diacritics@1.3.0: {}
 
   didyoumean@1.2.2: {}
 
@@ -3754,8 +3724,6 @@ snapshots:
   punycode@2.3.1: {}
 
   queue-microtask@1.2.3: {}
-
-  ramda@0.30.1: {}
 
   react-dom@19.0.0(react@19.0.0):
     dependencies:
