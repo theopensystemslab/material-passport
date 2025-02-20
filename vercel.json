@@ -1,0 +1,6 @@
+{
+  "crons": [{
+    "path": "/api/airtable/sync-orders",
+    "schedule": "*/15 * * * *"
+  }]
+}
