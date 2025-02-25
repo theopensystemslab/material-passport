@@ -1,15 +1,20 @@
-import "server-only"
-import { type NextRequest, NextResponse } from "next/server"
+import 'server-only'
+import { type NextRequest, NextResponse } from 'next/server'
 
-import { getAirtableDb } from "@/helpers/airtable"
-import { componentsTable, OrderBaseTable, Component, OrderBase } from "@/lib/schema"
-import { ComponentStatus } from "@/lib/definitions"
-import { getComponentStatusEnum } from "@/helpers/utils"
+import { getAirtableDb } from '@/helpers/airtable'
+import { getComponentStatusEnum } from '@/helpers/utils'
+import { ComponentStatus } from '@/lib/definitions'
+import {
+  Component,
+  OrderBase,
+  OrderBaseTable,
+  componentsTable
+} from '@/lib/schema'
 
 // allow function 120s to run to completion (default is 15 on Pro acct, max is 300)
 export const maxDuration = 120;
 // ensure that this route is not cached
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 const COMPONENT_STATUSES_TO_IGNORE = new Set([
   ComponentStatus.DesignInProgress,
@@ -19,7 +24,7 @@ const COMPONENT_STATUSES_TO_IGNORE = new Set([
 export async function GET(req: NextRequest): Promise<Response> {
   // guard against unauthorised triggering of this hook
   if (req.headers.get('Authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
-    return new NextResponse("Unauthorized", { status: 401 });
+    return new NextResponse('Unauthorized', { status: 401 });
   }
   try {
     const db = getAirtableDb()
@@ -74,8 +79,8 @@ export async function GET(req: NextRequest): Promise<Response> {
   } catch (error) {
     console.error(`Failed to sync orders in ${OrderBaseTable.name} to ${componentsTable.name} table:`, error);
     return NextResponse.json(
-        { error: `Failed to synchronise ${OrderBaseTable.name} with ${componentsTable.name} table` },
-        { status: 500 },
+      { error: `Failed to synchronise ${OrderBaseTable.name} with ${componentsTable.name} table` },
+      { status: 500 },
     );
   }
 }

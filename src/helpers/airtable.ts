@@ -1,14 +1,18 @@
-import "server-only"
-import Airtable from "airtable"
-import { AirtableTs, Table, Item } from "airtable-ts";
-import { isNil } from "es-toolkit";
+import 'server-only'
+import Airtable from 'airtable'
+import {
+  AirtableTs,
+  Item,
+  Table
+} from 'airtable-ts'
+import { isNil } from 'es-toolkit';
 
-import { componentsTable } from "@/lib/schema";
+import { componentsTable } from '@/lib/schema';
 
 export const getAirtableDb = (): AirtableTs => {
   // NB. your AIRTABLE_API_KEY should be a PAT, but is referred to as an API key throughout the docs/code
   if (!process.env.AIRTABLE_API_KEY) {
-    throw new Error("AIRTABLE_API_KEY is not defined");
+    throw new Error('AIRTABLE_API_KEY is not defined');
   }
   return new AirtableTs({
     apiKey: process.env.AIRTABLE_API_KEY,
@@ -22,9 +26,9 @@ export const scanTable = async (table: Table<Item>): Promise<Item[]> => {
 }
 
 // airtable-ts provides a much nicer interface, but has limited capabilities, so in some cases we use the original SDK
-export const getRawAirtableBase = (baseId: string | undefined = ""): Airtable.Base => {
+export const getRawAirtableBase = (baseId: string | undefined = ''): Airtable.Base => {
   if (!process.env.AIRTABLE_API_KEY) {
-    throw new Error("AIRTABLE_API_KEY is not defined");
+    throw new Error('AIRTABLE_API_KEY is not defined');
   }
   if (!baseId) {
     // if no base ID provided, assume we want the base containing the main 'Components' table
