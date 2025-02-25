@@ -259,9 +259,9 @@ export interface Component extends Item {
   createdAt: number,
   lastModifiedAt: number,
   notes: string,
-  carbonFootprint: string,
   history: string[],
   totalDistanceTravelled: number,
+  transportEmissionsFromFactory: number | null,
   project: string[] | null,
 }
 
@@ -295,9 +295,9 @@ export const componentsTable: Table<Component> = {
     createdAt: 'fldeVwgRUM6DuzRPL',
     lastModifiedAt: 'fldLCB1Luixol6dQZ',
     notes: 'fld2Rvpf7ESNE4QU4',
-    carbonFootprint: 'fldG3uGXM3Xo5pFHM',
     history: 'flde9DvkwiCOcWniL',
     totalDistanceTravelled: 'fldGmKSOm4ZYUR8b6',
+    transportEmissionsFromFactory: 'fldG3uGXM3Xo5pFHM',
     project: 'fldXXZQtedyrX4UYj',
   },
   schema: {
@@ -326,9 +326,9 @@ export const componentsTable: Table<Component> = {
     createdAt: 'number',
     lastModifiedAt: 'number',
     notes: 'string',
-    carbonFootprint: 'string',
     history: 'string[]',
     totalDistanceTravelled: 'number',
+    transportEmissionsFromFactory: 'number | null',
     project: 'string[] | null',
   },
 };
@@ -339,8 +339,8 @@ export interface History extends Item {
   component: string[],
   event: string,
   createdAt: number,
-  lat: number,
-  lon: number,
+  latitude: number,
+  longitude: number,
   description: string,
   photo: string[],
   distancedTravelled: number,
@@ -355,8 +355,8 @@ export const historyTable: Table<History> = {
     component: 'fld64voTPuEQcYvL1',
     event: 'fldvRJ66qCRXng7Dy',
     createdAt: 'fld9nLMqDcZRcNLkB',
-    lat: 'fld3VzHMZmcDI47PX',
-    lon: 'fldAkF1Qgjyis2Ofu',
+    latitude: 'fld3VzHMZmcDI47PX',
+    longitude: 'fldAkF1Qgjyis2Ofu',
     description: 'fldulCHKK4AtIkWsU',
     photo: 'fldUZY9GfiSMy7Mz3',
     distancedTravelled: 'fldA9su74avUcg1Xf',
@@ -366,8 +366,8 @@ export const historyTable: Table<History> = {
     component: 'string[]',
     event: 'string',
     createdAt: 'number',
-    lat: 'number',
-    lon: 'number',
+    latitude: 'number',
+    longitude: 'number',
     description: 'string',
     photo: 'string[]',
     distancedTravelled: 'number',
@@ -574,6 +574,8 @@ export interface Project extends Item {
   workshopRate: number,
   supplierRefFromSupplier: string,
   totalChassisEstimate: number,
+  latitude: number,
+  longitude: number,
 }
 
 export const projectsTable: Table<Project> = {
@@ -606,6 +608,8 @@ export const projectsTable: Table<Project> = {
     workshopRate: 'fld6HzBX7XXc5Bw2c',
     supplierRefFromSupplier: 'fldOZXPXvivZMFdMG',
     totalChassisEstimate: 'fldeTJ0zkv3tTc87w',
+    latitude: 'fldjBS0qYdeiOmIYC',
+    longitude: 'fldIdOTsjlYJAJsum',
   },
   schema: {
     projectName: 'string',
@@ -633,6 +637,8 @@ export const projectsTable: Table<Project> = {
     workshopRate: 'number',
     supplierRefFromSupplier: 'string',
     totalChassisEstimate: 'number',
+    latitude: 'number',
+    longitude: 'number',
   },
 };
 
