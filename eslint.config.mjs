@@ -1,17 +1,17 @@
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { dirname } from 'path'
+import { fileURLToPath } from 'url'
 
-import { FlatCompat } from '@eslint/eslintrc';
+import { FlatCompat } from '@eslint/eslintrc'
 import stylistic from '@stylistic/eslint-plugin'
-import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript';
+import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript'
 import importNewlines from 'eslint-plugin-import-newlines'
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 const compat = new FlatCompat({
   baseDirectory: __dirname,
-});
+})
 
 const eslintConfig = [
   ...compat.extends(
@@ -28,6 +28,7 @@ const eslintConfig = [
     },
     rules: {
       // enforce some explicit eslint rules as code style prefs, which can be enforced with `pnpm fix`
+      '@stylistic/semi': ['warn', 'never'],
       '@stylistic/indent': ['warn', 2],
       '@stylistic/quotes': ['warn', 'single'],
       '@stylistic/jsx-quotes': ['warn', 'prefer-double'],
@@ -67,6 +68,6 @@ const eslintConfig = [
       ]
     }
   }
-];
+]
 
-export default eslintConfig;
+export default eslintConfig

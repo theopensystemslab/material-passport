@@ -13,7 +13,7 @@ export const ComponentStatusLookup: { [key: string]: ComponentStatus } = {
 
 export const getComponentStatusEnum = (status: string): ComponentStatus => {
   if (!ComponentStatusLookup[status]) {
-    throw new Error(`Invalid status: ${status}`);
+    throw new Error(`Invalid status: ${status}`)
   }
   return ComponentStatusLookup[status]
 }

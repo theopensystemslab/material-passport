@@ -8,5 +8,5 @@ export default async function Component({
   const slug = (await params).slug
   return (
     <h1>{slug}</h1>
-  );
+  )
 }

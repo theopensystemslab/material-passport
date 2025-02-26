@@ -18,5 +18,5 @@ export default function Splash({
       </h3>
       <p> TEST </p>
     </>
-  );
+  )
 }
