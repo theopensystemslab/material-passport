@@ -10,6 +10,7 @@ import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 
 import { LoadingSpinner } from '@/components/LoadingSpinner'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -23,6 +24,7 @@ import {
   getRecordIdByField,
   scanTable,
 } from '@/helpers/airtable'
+import { getUniquePartFromUid } from '@/helpers/data'
 import {
   type Component,
   Project,
@@ -126,26 +128,22 @@ export default async function Page({
   return (
     // TODO: move Suspense/spinner up to root layout level?
     <Suspense fallback={<LoadingSpinner />}>
-      {/* TODO: get this <head> hoisting so as to set page title in browser */}
+      {/* TODO: get this <head> hoisting so as to set page title in browser and/or pull out as custom component */}
       <Head>
         <title>{`Passport for component ${uid}`}</title>
       </Head>
-      <div className="flex items-centre justify-between">
-        <h2>{component.componentName}</h2>
-        <p>#{component.number}</p>
-      </div>
-      <div className="p-2">
-        <div className="flex items-center justify-between mb-4">
-          <Link href={`/project/${kebabCase(project.projectName)}`} className="flex items-center space-x-1">
-            <MoveLeft />
-            <p>
-              {project.projectName}
-            </p>
+      <main className="flex flex-col p-8 pt-4 gap-4 mb-auto">
+        <Button variant="ghost" size="sm" asChild className="p-0 justify-start text-sm lg:text-md">
+          <Link href={`/project/${kebabCase(project.projectName)}`}>
+            <MoveLeft /> {project.projectName}
           </Link>
-          {/* TODO: make status a nice button w/ colours according to the miro */}
-          <p>
-            {component.status}
-          </p>
+        </Button>
+        <div className="flex flex-col space-y-2">
+          <h2>{component.componentName}</h2>
+          <div className="flex justify-between">
+            <p>#{getUniquePartFromUid(component.componentUID)}</p>
+            <Badge className={kebabCase(component.status)}>{component.status}</Badge>
+          </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-[1fr]">
@@ -229,7 +227,7 @@ export default async function Page({
             <Button variant="default">Action</Button>
           </div>
         </div>
-      </div>
+      </main>
     </Suspense>
   )
 }

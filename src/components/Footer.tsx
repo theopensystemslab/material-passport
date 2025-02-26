@@ -1,42 +1,37 @@
 import { type JSX } from 'react'
+import { type FooterProps } from 'react-html-props'
 
-export const Footer = (): JSX.Element => {
+export const Footer = (props: FooterProps): JSX.Element => {
   return (
-    <footer className="flex flex-col items-start p-8 bg-foreground text-background">
-      <nav>
-        <a
-          className="flex items-center gap-2"
-          href="https://www.opensystemslab.io/news/100-factories"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          What is this?
-        </a>
-        <a
-          className="flex items-center gap-2"
-          href="https://www.opensystemslab.io/contact"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Feedback
-        </a>
-        <a
-          className="flex items-center gap-2"
-          href="https://www.opensystemslab.io/contact"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Contact
-        </a>
-        <a
-          className="flex items-center gap-2"
-          href="https://www.opensystemslab.io/"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          OSL
-        </a>
-      </nav>
+    <footer {...props} className="flex flex-col items-start p-8 lg:px-16 bg-foreground text-background">
+      <a
+        href="https://www.opensystemslab.io/news/100-factories"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        What is this?
+      </a>
+      <a
+        href="https://www.opensystemslab.io/contact"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Feedback
+      </a>
+      <a
+        href="https://www.opensystemslab.io/contact"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Contact
+      </a>
+      <a
+        href="https://www.opensystemslab.io/"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        OSL
+      </a>
     </footer>
   )
 }

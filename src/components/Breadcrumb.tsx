@@ -4,19 +4,21 @@
 import { capitalize } from 'es-toolkit'
 import { usePathname } from 'next/navigation'
 import { type JSX } from 'react'
+import { type DivProps } from 'react-html-props'
 
 import { HomeIcon } from '@/components/HomeIcon'
 import { Separator } from '@/components/ui/separator'
 
+
 // TODO: develop into a full breadcrumb/navigation solution?
-export const Breadcrumb = (): JSX.Element => {
+export const Breadcrumb = (props: DivProps): JSX.Element => {
   const pathname = usePathname()
   const parts = pathname.split('/')
   // use a flag to determine if we show more than home icon
   const showPath = parts.length >= 2 && parts[1] !== ''
 
   return (
-    <div className="flex items-center justify-start gap-4">
+    <div {...props} className="flex items-center justify-start gap-4">
       <HomeIcon />
       {showPath && (
         <>

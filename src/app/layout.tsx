@@ -24,13 +24,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      </head>
       <body
         className={`${interSans.variable} antialiased bg-background text-foreground flex flex-col min-h-screen justify-between`}
       >
         <Header />
-        <main className="flex flex-col px-8 pt-4 pb-16 gap-8 mb-auto">
+        <div className="container mx-auto max-w-6xl">
           {children}
-        </main>
+        </div>
         <Footer />
       </body>
     </html>
