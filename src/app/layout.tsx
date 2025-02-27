@@ -17,6 +17,7 @@ export const metadata: Metadata = {
   description: 'Track your WikiHouse blocks all the way home',
 }
 
+// we implement a minimal but decisive layout for full app here, leaving more specific layout/styling to individual pages
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -28,12 +29,12 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </head>
       <body
-        className={`${interSans.variable} antialiased bg-background text-foreground flex flex-col min-h-screen justify-between`}
+        className={`${interSans.variable} antialiased bg-background text-foreground flex flex-col min-h-screen justify-start`}
       >
         <Header />
-        <div className="container mx-auto max-w-6xl">
+        <main className="flex flex-col flex-1 container max-w-6xl mx-auto mb-auto p-8 pt-4 gap-4">
           {children}
-        </div>
+        </main>
         <Footer />
       </body>
     </html>

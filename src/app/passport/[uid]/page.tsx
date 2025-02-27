@@ -9,28 +9,27 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 
+
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle
-} from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import {
-  getAirtableDb,
-  getRecordIdByField,
-  scanTable,
+  getRecordByField,
+  getRecordById,
+  scanTable
 } from '@/helpers/airtable'
 import { getUniquePartFromUid } from '@/helpers/data'
 import {
   type Component,
+  type OrderBase,
+  OrderBaseTable,
   Project,
   componentsTable,
   projectsTable
 } from '@/lib/schema'
+import windowBlueprint from 'public/window-xl4.svg'
 
 // we use ISR to generate static passports at build and fetch fresh data at request time as needed
 export const revalidate = 60
@@ -56,14 +55,12 @@ export default async function Page({
 }) {
   const { uid } = await params
 
-  const db = getAirtableDb()
-  let component: Component | undefined
-  let project: Project | undefined
+  let component
   if (process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD) {
     // if generating at build time, use cached scan of components table
     const components = (await getCachedTable(componentsTable)) as Component[]
     component = components.find((component) => component.componentUID === uid)
-    if (component === undefined) {
+    if (!component) {
       console.warn(`No component with UID ${uid} found in table:`)
       notFound()
     }
@@ -71,34 +68,9 @@ export default async function Page({
   } else {
     // if generating at request time (or in development), fetch component directly
     try {
-      if (!componentsTable.mappings) {
-        throw new Error(
-          `No mappings found for ${componentsTable.name} table - cannot reference UID field to fetch record`
-        )
-      }
-      const recordId = await getRecordIdByField(
-        componentsTable.tableId,
-        componentsTable.mappings.componentUID,
-        uid
-      )
-      if (!recordId) {
-        throw new Error(`Failed to fetch record ID for component ${uid}`)
-      }
-      console.debug(`Fetched record ID ${recordId} for component ${uid}`)
-      component = await db.get(componentsTable, recordId)
-      if (!component) {
-        throw new Error(
-          `Failed to fetch component ${uid} with record ID ${recordId}`
-        )
-      }
-      console.debug(
-        `Fetched component ${component.componentUID} from Airtable:`
-      )
-      console.debug(component)
+      component = await getRecordByField(componentsTable, 'componentUID', uid, { shouldThrow: true }) as Component
       if (component.componentUID !== uid) {
-        throw new Error(
-          `Fetched wrong record: ${component.componentUID} != ${uid}`
-        )
+        throw new Error(`Fetched wrong record: ${component.componentUID} != ${uid}`)
       }
     } catch (error) {
       console.error(`Error fetching component ${uid}:`, error)
@@ -106,24 +78,23 @@ export default async function Page({
     }
   }
 
-  // type guard to ensure component is defined
-  if (!component) {
-    console.error(`No component found for UID: ${uid}`)
-    notFound()
+  // TODO: also get projects & blocks from cached scans if at build (again, to avoid throttling)
+  // fetch data for project of which this component is a member
+  let project
+  if (component.project?.[0]) {
+    project = await getRecordById(projectsTable, component.project[0]) as Project
+  }
+  
+  // if component is from a library, it likely has an image associated, so we also grab the order
+  let order
+  if (isNotNil(component.librarySource)) {
+    console.log('LIBRARY BLOCK')
+    order = await getRecordById(OrderBaseTable, component.orderBase[0]) as OrderBase
   }
 
-  // fetch project data
-  // TODO: write util to safely get stuff from Airtable (as for component above)
-  if (component.project && component.project.length > 0 && component.project[0]) {
-    project = await db.get(projectsTable, component.project[0])
-    console.debug(project)
-  }
-
-  // type guard to ensure project is defined
-  if (!project) {
-    console.error(`No related project found for component with UID: ${uid}`)
-    notFound()
-  }
+  console.log('component', component)
+  console.log('project', project)
+  console.log('order', order)
 
   return (
     // TODO: move Suspense/spinner up to root layout level?
@@ -132,102 +103,103 @@ export default async function Page({
       <Head>
         <title>{`Passport for component ${uid}`}</title>
       </Head>
-      <main className="flex flex-col p-8 pt-4 gap-4 mb-auto">
+      {project && (
         <Button variant="ghost" size="sm" asChild className="p-0 justify-start text-sm lg:text-md">
           <Link href={`/project/${kebabCase(project.projectName)}`}>
             <MoveLeft /> {project.projectName}
           </Link>
         </Button>
-        <div className="flex flex-col space-y-2">
-          <h2>{component.componentName}</h2>
-          <div className="flex justify-between">
-            <p>#{getUniquePartFromUid(component.componentUID)}</p>
-            <Badge className={kebabCase(component.status)}>{component.status}</Badge>
-          </div>
+      )}
+      <div className="flex flex-col space-y-2">
+        <h2>{component.componentName}</h2>
+        <div className="flex justify-between">
+          <p>#{getUniquePartFromUid(component.componentUID)}</p>
+          {/* FIXME: get badge colour assignment working */}
+          <Badge className={kebabCase(component.status)}>{component.status}</Badge>
+        </div>
+      </div>
+
+      {/* TODO: find a more suitable placeholder (currently using WINDOW-XL4 skylark block) */}
+      <Card className="relative w-full h-64 lg:h-96">
+        <Image
+          className="object-contain object-center rounded-md p-2"
+          src={order ? order.mainImage[0] : windowBlueprint}
+          alt={order ?
+            `Orthogonal diagram of ${component.componentName} block` :
+            'Placeholder - orthogonal diagram of WINDOW-XL4 block'
+          }
+          // images are svg so no need to optimise (alternatively we could set dangerouslyAllowSVG in next config)
+          unoptimized 
+          fill
+        />
+      </Card>
+
+      {/* SAVE POINT - IGNORE EVERYTHING ABOVE THIS LINE */}
+
+      <section className="space-y-4">
+        {/* Info */}
+        <div>
+          <h3 className="font-semibold">Info</h3>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-[1fr]">
-          {/* Block name / ID / Image card */}
-          <Card>
-            <CardHeader>
-              <CardTitle></CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center">
-              <div className="my-2 w-32 h-40 bg-gray-100 border rounded flex items-center justify-center">
-                <span className="text-sm text-muted-foreground">
-                  <Image src="/building-block.png" width={64} height={64} alt="Block image" />
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <section className="space-y-4">
-            {/* Info */}
-            <div>
-              <h2 className="font-semibold">Info</h2>
-              <Separator className="my-2" />
-            </div>
-
-            <div>
-              <h2 className="font-semibold">Materials</h2>
-              <Separator className="my-2" />
-              <div className="flex flex-col space-y-2">
-                <div className="flex justify-between">
-                  <span>OSB</span>
-                  <span>producer</span>
-                  <span>CO₂</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Insulation</span>
-                  <span>producer</span>
-                  <span>CO₂</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Design */}
-            <div>
-              <h2 className="font-semibold">Design</h2>
-              <Separator className="my-2" />
-              {/* Content goes here */}
-            </div>
-          </section>
-
-          {/* History / Timeline */}
-          <section className="space-y-4">
-            <h2 className="font-semibold">History</h2>
-            <Separator />
-            {/* Simple vertical timeline */}
-            <div className="space-y-4">
-              {/* Single event */}
-              <div>
-                <p className="text-sm font-medium">1 Jan 2025</p>
-                <p>Event</p>
-              </div>
-              <Separator />
-              <div>
-                <p className="text-sm font-medium">12 Dec 2024</p>
-                <p>Event</p>
-                <p className="text-sm text-muted-foreground">
-                  Description written as a little paragraph
-                </p>
-              </div>
-              <Separator />
-              <div>
-                <p className="text-sm font-medium">2 Dec 2024</p>
-                <p>Event</p>
-                <p className="text-sm text-muted-foreground">
-                  Description written as a little paragraph
-                </p>
-              </div>
-            </div>
-          </section>
-
+        <div>
+          <h3 className="font-semibold">Materials</h3>
+          <Separator className="my-2" />
           <div className="flex flex-col space-y-2">
-            <Button variant="default">Action</Button>
+            <div className="flex justify-between">
+              <span>OSB</span>
+              <span>producer</span>
+              <span>CO₂</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Insulation</span>
+              <span>producer</span>
+              <span>CO₂</span>
+            </div>
           </div>
         </div>
-      </main>
+
+        {/* Design */}
+        <div>
+          <h3 className="font-semibold">Design</h3>
+          <Separator className="my-2" />
+          {/* Content goes here */}
+        </div>
+      </section>
+
+      {/* History / Timeline */}
+      <section className="space-y-4">
+        <h2 className="font-semibold">History</h2>
+        <Separator />
+        {/* Simple vertical timeline */}
+        <div className="space-y-4">
+          {/* Single event */}
+          <div>
+            <p className="text-sm font-medium">1 Jan 2025</p>
+            <p>Event</p>
+          </div>
+          <Separator />
+          <div>
+            <p className="text-sm font-medium">12 Dec 2024</p>
+            <p>Event</p>
+            <p className="text-sm text-muted-foreground">
+              Description written as a little paragraph
+            </p>
+          </div>
+          <Separator />
+          <div>
+            <p className="text-sm font-medium">2 Dec 2024</p>
+            <p>Event</p>
+            <p className="text-sm text-muted-foreground">
+              Description written as a little paragraph
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <div className="flex flex-col space-y-2">
+        <Button variant="default">Action</Button>
+      </div>
     </Suspense>
   )
 }

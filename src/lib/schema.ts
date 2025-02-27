@@ -46,11 +46,11 @@ export interface OrderBase extends Item {
   costPerUnitFromMaterialsInsulation: string,
   unitFromMaterialsInsulation: string,
   insulationCostPerBlock: number,
-  thumbnailFromMaterialsTimberCopy: string[],
-  gWPFromMaterialsInsulation: number | null, // edit
+  thumbnailFromMaterialsInsulation: string[],
+  gWPFromMaterialsInsulation: number,
   densityFromMaterialsInsulation: string,
   materialsFixings: string[],
-  thumbnailFromMaterialsTimberCopyCopy: string[],
+  thumbnailFromMaterialsFixings: string[],
   grossCost: number,
   wHPlatformFee: number,
   totalCost: number,
@@ -125,11 +125,11 @@ export const OrderBaseTable: Table<OrderBase> = {
     costPerUnitFromMaterialsInsulation: 'fldeemVX9mNywaVDx',
     unitFromMaterialsInsulation: 'fldanjREhsaRA8nVU',
     insulationCostPerBlock: 'fldrHXp7GHDDIEgFa',
-    thumbnailFromMaterialsTimberCopy: 'fldJZOhH43WUsugg0',
+    thumbnailFromMaterialsInsulation: 'fldJZOhH43WUsugg0',
     gWPFromMaterialsInsulation: 'fldlrNg1G0nIPXEJa',
     densityFromMaterialsInsulation: 'fldc0jpjBzPUdur2y',
     materialsFixings: 'fldjHtAuKiSwaK9ID',
-    thumbnailFromMaterialsTimberCopyCopy: 'fldOGMmyRfY73to5d',
+    thumbnailFromMaterialsFixings: 'fldOGMmyRfY73to5d',
     grossCost: 'fldLuiTNJpPaR0mHG',
     wHPlatformFee: 'fldinKzgTqnYqBM8S',
     totalCost: 'fldgOqLgg9AHa4KeT',
@@ -199,11 +199,11 @@ export const OrderBaseTable: Table<OrderBase> = {
     costPerUnitFromMaterialsInsulation: 'string',
     unitFromMaterialsInsulation: 'string',
     insulationCostPerBlock: 'number',
-    thumbnailFromMaterialsTimberCopy: 'string[]',
-    gWPFromMaterialsInsulation: 'number | null', // edit
+    thumbnailFromMaterialsInsulation: 'string[]',
+    gWPFromMaterialsInsulation: 'number',
     densityFromMaterialsInsulation: 'string',
     materialsFixings: 'string[]',
-    thumbnailFromMaterialsTimberCopyCopy: 'string[]',
+    thumbnailFromMaterialsFixings: 'string[]',
     grossCost: 'number',
     wHPlatformFee: 'number',
     totalCost: 'number',
@@ -409,9 +409,9 @@ export interface AllBlock extends Item {
   insulationCost: number,
   fixings: string,
   costPerUnitFromFixings: string,
-  fixingsQuantity: number,
+  fixingsQuantity: number | null, // edit
   fixingsCost: number,
-  estAssemblyTimePersonHrs: number,
+  estAssemblyTimePersonHrs: number | null, // edit
   assemblyRate: string,
   costPerUnitFromRef: string,
   assemblyCost: number,
@@ -524,9 +524,9 @@ export const AllBlocksTable: Table<AllBlock> = {
     insulationCost: 'number',
     fixings: 'string',
     costPerUnitFromFixings: 'string',
-    fixingsQuantity: 'number',
+    fixingsQuantity: 'number | null', // edit
     fixingsCost: 'number',
-    estAssemblyTimePersonHrs: 'number',
+    estAssemblyTimePersonHrs: 'number | null', // edit
     assemblyRate: 'string',
     costPerUnitFromRef: 'string',
     assemblyCost: 'number',
@@ -558,7 +558,7 @@ export interface Project extends Item {
   machiningRateFromSupplier: string,
   typicalLabourRateFromSupplier: string,
   status: string,
-  productionStartDate: number,
+  productionStartDate: number | null, // edit
   deliveryDate: number | null, // edit
   totalChassisCostFromOrderBase: number,
   totalPlatformFeeFromOrderBase: number,
@@ -576,6 +576,9 @@ export interface Project extends Item {
   totalChassisEstimate: number,
   latitude: number,
   longitude: number,
+  materialProcessing: string[],
+  statusFromOrderBase: string[],
+  statusRollupFromOrderBase: string,
 }
 
 export const projectsTable: Table<Project> = {
@@ -610,6 +613,9 @@ export const projectsTable: Table<Project> = {
     totalChassisEstimate: 'fldeTJ0zkv3tTc87w',
     latitude: 'fldjBS0qYdeiOmIYC',
     longitude: 'fldIdOTsjlYJAJsum',
+    materialProcessing: 'fldwQwq6XBxg72fkT',
+    statusFromOrderBase: 'fldJCGNrcb3H8dZwV',
+    statusRollupFromOrderBase: 'fldpQow5HbJxKaldG',
   },
   schema: {
     projectName: 'string',
@@ -621,7 +627,7 @@ export const projectsTable: Table<Project> = {
     machiningRateFromSupplier: 'string',
     typicalLabourRateFromSupplier: 'string',
     status: 'string',
-    productionStartDate: 'number',
+    productionStartDate: 'number | null', // edit
     deliveryDate: 'number | null', // edit
     totalChassisCostFromOrderBase: 'number',
     totalPlatformFeeFromOrderBase: 'number',
@@ -639,6 +645,9 @@ export const projectsTable: Table<Project> = {
     totalChassisEstimate: 'number',
     latitude: 'number',
     longitude: 'number',
+    materialProcessing: 'string[]',
+    statusFromOrderBase: 'string[]',
+    statusRollupFromOrderBase: 'string',
   },
 }
 
