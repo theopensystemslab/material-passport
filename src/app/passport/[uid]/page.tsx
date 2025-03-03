@@ -1,4 +1,4 @@
-import { isNotNil } from 'es-toolkit'
+import { isNotNil, round  } from 'es-toolkit'
 import { kebabCase } from 'es-toolkit/string'
 import { MoveLeft } from 'lucide-react'
 import { unstable_cache as cache } from 'next/cache'
@@ -9,12 +9,23 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 
-
 import { LoadingSpinner } from '@/components/LoadingSpinner'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
+// import { Separator } from '@/components/ui/separator'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableRow,
+} from '@/components/ui/table'
 import {
   getRecordByField,
   getRecordById,
@@ -30,6 +41,8 @@ import {
   projectsTable
 } from '@/lib/schema'
 import windowBlueprint from 'public/window-xl4.svg'
+
+const MAX_DECIMAL_PLACE_PRECISION = 1
 
 // we use ISR to generate static passports at build and fetch fresh data at request time as needed
 export const revalidate = 60
@@ -98,6 +111,7 @@ export default async function Page({
 
   return (
     // TODO: move Suspense/spinner up to root layout level?
+    // https://nextjs.org/docs/app/building-your-application/routing/loading-ui-and-streaming
     <Suspense fallback={<LoadingSpinner />}>
       {/* TODO: get this <head> hoisting so as to set page title in browser and/or pull out as custom component */}
       <Head>
@@ -136,67 +150,113 @@ export default async function Page({
 
       {/* SAVE POINT - IGNORE EVERYTHING ABOVE THIS LINE */}
 
-      <section className="space-y-4">
-        {/* Info */}
-        <div>
-          <h3 className="font-semibold">Info</h3>
-        </div>
+      {/* we use the powerful `asChild` flag (from shadcn/Radix) to enforce semantic html */}
+      {/* https://www.radix-ui.com/primitives/docs/guides/composition */}
+      {/* TODO: decide which accordions should be expanded by default on page load */}
+      <Accordion type="multiple" defaultValue={['info']}>
+        <AccordionItem asChild value="info">
+          <section>
+            <AccordionTrigger>
+              <h3>Info</h3>
+            </AccordionTrigger>
+            <AccordionContent>
+              <Table>
+                <TableBody>
+                  {/* TODO: we don't bother with a header row (data is self-explanatory) - check if this is bad a11y? */}
+                  {/* TODO: whittle this section down with a map */}
+                  {isNotNil(component.librarySource) && <TableRow>
+                    <TableCell className="font-medium">Block library</TableCell>
+                    <TableCell className="text-right">{component.librarySource}</TableCell>
+                  </TableRow>}
+                  <TableRow>
+                    <TableCell className="font-medium">Manufacturer</TableCell>
+                    <TableCell className="text-right">{component.manufacturer}</TableCell>
+                  </TableRow>
+                  {isNotNil(component.totalMass) && <TableRow>
+                    <TableCell className="font-medium">Mass <small>(kg)</small></TableCell>
+                    <TableCell className="text-right">{round(component.totalMass, MAX_DECIMAL_PLACE_PRECISION)}</TableCell>
+                  </TableRow>}
+                  {isNotNil(component.totalGWP) && <TableRow>
+                    {/* TODO: do we need to give time horizon for this GWP measurement, e.g. `GWP-20` */}
+                    <TableCell className="font-medium">GWP</TableCell>
+                    <TableCell className="text-right">{round(component.totalGWP, MAX_DECIMAL_PLACE_PRECISION)}</TableCell>
+                  </TableRow>}
+                  {isNotNil(component.totalDistanceTravelled) && <TableRow>
+                    <TableCell className="font-medium">Distance travelled <small>(miles)</small></TableCell>
+                    <TableCell className="text-right">{round(component.totalDistanceTravelled, MAX_DECIMAL_PLACE_PRECISION)}</TableCell>
+                  </TableRow>}
+                  {isNotNil(component.totalDistanceTravelled) && <TableRow>
+                    <TableCell className="font-medium">Transport emissions <small>(kgCO<sub>2</sub>e)</small></TableCell>
+                    <TableCell className="text-right">{round(component.totalDistanceTravelled, MAX_DECIMAL_PLACE_PRECISION)}</TableCell>
+                  </TableRow>}
+                </TableBody>
+              </Table>
 
-        <div>
-          <h3 className="font-semibold">Materials</h3>
-          <Separator className="my-2" />
-          <div className="flex flex-col space-y-2">
-            <div className="flex justify-between">
-              <span>OSB</span>
-              <span>producer</span>
-              <span>CO₂</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Insulation</span>
-              <span>producer</span>
-              <span>CO₂</span>
-            </div>
-          </div>
-        </div>
+            </AccordionContent>
+          </section>
+        </AccordionItem>
+        <AccordionItem asChild value="materials">
+          <section>
+            <AccordionTrigger>
+              <h3>Materials</h3>
+            </AccordionTrigger>
+            <AccordionContent>
+              <div className="flex flex-col space-y-2">
+                <div className="flex justify-between">
+                  <span>OSB</span>
+                  <span>producer</span>
+                  <span>CO₂</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Insulation</span>
+                  <span>producer</span>
+                  <span>CO₂</span>
+                </div>
+              </div>
+            </AccordionContent>
+          </section>
+        </AccordionItem>
+        <AccordionItem asChild value="design">
+          <section>
+            <AccordionTrigger>
+              <h3>Design</h3>
+            </AccordionTrigger>
+            <AccordionContent>
+              ???
+            </AccordionContent>
+          </section>
+        </AccordionItem>
+        <AccordionItem asChild value="history">
+          <section>
+            <AccordionTrigger>
+              <h3>History</h3>
+            </AccordionTrigger>
+            <AccordionContent>
+              <div>
+                <p className="text-sm font-medium">1 Jan 2025</p>
+                <p>Event</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium">12 Dec 2024</p>
+                <p>Event</p>
+                <p className="text-sm text-muted-foreground">
+                  Description written as a little paragraph
+                </p>
+              </div>
+              <div>
+                <p className="text-sm font-medium">2 Dec 2024</p>
+                <p>Event</p>
+                <p className="text-sm text-muted-foreground">
+                  Description written as a little paragraph
+                </p>
+              </div>
+            </AccordionContent>
+          </section>
+        </AccordionItem>
+      </Accordion>
 
-        {/* Design */}
-        <div>
-          <h3 className="font-semibold">Design</h3>
-          <Separator className="my-2" />
-          {/* Content goes here */}
-        </div>
-      </section>
-
-      {/* History / Timeline */}
-      <section className="space-y-4">
-        <h2 className="font-semibold">History</h2>
-        <Separator />
-        {/* Simple vertical timeline */}
-        <div className="space-y-4">
-          {/* Single event */}
-          <div>
-            <p className="text-sm font-medium">1 Jan 2025</p>
-            <p>Event</p>
-          </div>
-          <Separator />
-          <div>
-            <p className="text-sm font-medium">12 Dec 2024</p>
-            <p>Event</p>
-            <p className="text-sm text-muted-foreground">
-              Description written as a little paragraph
-            </p>
-          </div>
-          <Separator />
-          <div>
-            <p className="text-sm font-medium">2 Dec 2024</p>
-            <p>Event</p>
-            <p className="text-sm text-muted-foreground">
-              Description written as a little paragraph
-            </p>
-          </div>
-        </div>
-      </section>
-
+      {/* TODO: make this button do something! (via server action) */}
+      {/* https://nextjs.org/docs/app/building-your-application/data-fetching/server-actions-and-mutations */}
       <div className="flex flex-col space-y-2">
         <Button variant="default">Action</Button>
       </div>
