@@ -81,9 +81,14 @@ export default async function Page({
   } else {
     // if generating at request time (or in development), fetch component directly
     try {
-      component = await getRecordByField(componentsTable, 'componentUID', uid, { shouldThrow: true }) as Component
-      if (component.componentUID !== uid) {
-        throw new Error(`Fetched wrong record: ${component.componentUID} != ${uid}`)
+      component = await getRecordByField(
+        componentsTable,
+        componentsTable.mappings?.componentUid,
+        uid,
+        { shouldThrow: true },
+      ) as Component
+      if (component.componentUid !== uid) {
+        throw new Error(`Fetched wrong record: ${component.componentUid} != ${uid}`)
       }
     } catch (error) {
       console.error(`Error fetching component ${uid}:`, error)
@@ -127,7 +132,7 @@ export default async function Page({
       <div className="flex flex-col space-y-2">
         <h2>{component.componentName}</h2>
         <div className="flex justify-between">
-          <p>#{getUniquePartFromUid(component.componentUID)}</p>
+          <p>#{getUniquePartFromUid(component.componentUid)}</p>
           {/* FIXME: get badge colour assignment working */}
           <Badge className={kebabCase(component.status)}>{component.status}</Badge>
         </div>
@@ -176,13 +181,13 @@ export default async function Page({
                     <TableCell className="font-medium">Mass <small>(kg)</small></TableCell>
                     <TableCell className="text-right">{round(component.totalMass, MAX_DECIMAL_PLACE_PRECISION)}</TableCell>
                   </TableRow>}
-                  {isNotNil(component.totalGWP) && <TableRow>
+                  {isNotNil(component.totalGwp) && <TableRow>
                     {/* TODO: do we need to give time horizon for this GWP measurement, e.g. `GWP-20` */}
                     <TableCell className="font-medium">GWP</TableCell>
-                    <TableCell className="text-right">{round(component.totalGWP, MAX_DECIMAL_PLACE_PRECISION)}</TableCell>
+                    <TableCell className="text-right">{round(component.totalGwp, MAX_DECIMAL_PLACE_PRECISION)}</TableCell>
                   </TableRow>}
                   {isNotNil(component.totalDistanceTravelled) && <TableRow>
-                    <TableCell className="font-medium">Distance travelled <small>(miles)</small></TableCell>
+                    <TableCell className="font-medium">Distance travelled <small>(kg)</small></TableCell>
                     <TableCell className="text-right">{round(component.totalDistanceTravelled, MAX_DECIMAL_PLACE_PRECISION)}</TableCell>
                   </TableRow>}
                   {isNotNil(component.totalDistanceTravelled) && <TableRow>

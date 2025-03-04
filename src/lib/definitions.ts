@@ -9,3 +9,9 @@ export enum ComponentStatus {
   Installed = 'Installed',
   InUse = 'In use',
 }
+
+// gist some types here to build on the schema.ts file, for use in the airtable helper
+// we know in practice that keys on an Item are strings - but we have to convince tsc!
+export type ItemKeys<I> = Extract<keyof Omit<I, 'id'>, string>
+export type TableMapping<I> = Record<ItemKeys<I>, string>
+export type ReversedTableMapping<I> = Record<string, ItemKeys<I>>

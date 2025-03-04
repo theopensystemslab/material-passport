@@ -2,14 +2,14 @@ import 'server-only'
 import { type NextRequest, NextResponse } from 'next/server'
 
 import { getAirtableDb } from '@/helpers/airtable'
-import { getComponentStatusEnum } from '@/helpers/utils'
 import { ComponentStatus } from '@/lib/definitions'
 import {
-  Component,
-  OrderBase,
-  OrderBaseTable,
-  componentsTable
+  type Component,
+  type OrderBase,
+  componentsTable,
+  orderBaseTable,
 } from '@/lib/schema'
+import { getComponentStatusEnum } from '@/lib/utils'
 
 // allow function 120s to run to completion (default is 15 on Pro acct, max is 300)
 export const maxDuration = 120
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   }
   try {
     const db = getAirtableDb()
-    const orders: OrderBase[] = await db.scan(OrderBaseTable)
+    const orders: OrderBase[] = await db.scan(orderBaseTable)
 
     let ordersSynced = 0, ordersIgnored = 0, recordsCreated = 0
     for (const order of orders) {
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest): Promise<Response> {
         recordsCreated++
       }
       // finally, mark the order as synced to avoid duplicating records on next run
-      await db.update(OrderBaseTable, { id: order.id, isSynced: true })
+      await db.update(orderBaseTable, { id: order.id, isSynced: true })
       console.log(`Successfully created ${order.quantity} new component records from order ${order.orderRef}`)
       ordersSynced++
     }
@@ -67,19 +67,19 @@ export async function GET(req: NextRequest): Promise<Response> {
     // response status code should indicate whether anything was actually created
     if (ordersSynced > 0) {
       return NextResponse.json(
-        { message: `Synced ${ordersSynced} orders from ${OrderBaseTable.name} to ${componentsTable.name} table` },
+        { message: `Synced ${ordersSynced} orders from ${orderBaseTable.name} to ${componentsTable.name} table` },
         { status: 201 },
       )
     } else {
       return NextResponse.json(
-        { message: `No action: ${OrderBaseTable.name} is already synced with ${componentsTable.name} table` },
+        { message: `No action: ${orderBaseTable.name} is already synced with ${componentsTable.name} table` },
         { status: 204 },
       )
     }
   } catch (error) {
-    console.error(`Failed to sync orders in ${OrderBaseTable.name} to ${componentsTable.name} table:`, error)
+    console.error(`Failed to sync orders in ${orderBaseTable.name} to ${componentsTable.name} table:`, error)
     return NextResponse.json(
-      { error: `Failed to synchronise ${OrderBaseTable.name} with ${componentsTable.name} table` },
+      { error: `Failed to synchronise ${orderBaseTable.name} with ${componentsTable.name} table` },
       { status: 500 },
     )
   }

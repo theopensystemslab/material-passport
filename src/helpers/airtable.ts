@@ -2,11 +2,16 @@ import 'server-only'
 import Airtable from 'airtable'
 import {
   AirtableTs,
-  Item,
-  Table
+  type Item,
+  type Table,
 } from 'airtable-ts'
 import { isNil } from 'es-toolkit'
 
+import {
+  ItemKeys,
+  ReversedTableMapping,
+  TableMapping
+} from '@/lib/definitions'
 import { componentsTable } from '@/lib/schema'
 
 export const getAirtableDb = (): AirtableTs => {
@@ -29,7 +34,7 @@ export const getRawAirtableBase = (baseId: string | undefined = undefined): Airt
   return new Airtable({apiKey: process.env.AIRTABLE_API_KEY}).base(baseId)
 }
 
-export const scanTable = async (table: Table<Item>): Promise<Item[]> => {
+export const scanTable = async <I extends Item>(table: Table<I>): Promise<I[]> => {
   const db = getAirtableDb()
   console.debug(`Scanning table: ${table.name}`)
   return await db.scan(table)
@@ -39,11 +44,11 @@ interface GetRecordOptions {
   shouldThrow?: boolean
 }
 
-export const getRecordById = async (
-  table: Table<Item>,
+export const getRecordById = async <I extends Item>(
+  table: Table<I>,
   recordId: string,
   { shouldThrow = false }: GetRecordOptions = {},
-): Promise<Item | undefined> => {
+): Promise<I | undefined> => {
   const db = getAirtableDb()
   console.debug(`Fetching record ${recordId} from table ${table.name}`)
   const record = await db.get(table, recordId)
@@ -85,25 +90,28 @@ export const getRecordIdByField = async (
   return data[0].id
 }
 
-export const getRecordByField = async <T extends Item>(
-  table: Table<T>,
-  fieldMapping: keyof Omit<T, 'id'>,
+export const getRecordByField = async <I extends Item>(
+  table: Table<I>,
+  fieldId: string | undefined,
   value: string | number,
   { shouldThrow = false, baseId = undefined }: rawGetRecordOptions = {},
-): Promise<T | undefined> => {
+): Promise<I | undefined> => {
   const db = getAirtableDb()
   if (!table.mappings) {
-    const msg = `No mappings found for ${table.name} table - cannot reference field ${String(fieldMapping)}`
+    const msg = `No mappings found for ${table.name} table - cannot reference field ${String(fieldId)}`
     if (shouldThrow) throw new Error(msg)
     console.warn(msg)
     return
   }
-  // in practice the field ID is always a string (see schema.ts), but we ensure for type safety
-  const fieldId = getFieldId(table.mappings[fieldMapping])
-  const actualFieldId = Array.isArray(fieldId) ? fieldId[0] : fieldId
+  if (!fieldId) {
+    const msg = 'No field ID given'
+    if (shouldThrow) throw new Error(msg)
+    console.warn(msg)
+    return
+  }
   const recordId = await getRecordIdByField(
     componentsTable.tableId,
-    actualFieldId,
+    fieldId,
     value,
     { shouldThrow, baseId },
   )
@@ -115,21 +123,26 @@ export const getRecordByField = async <T extends Item>(
     console.warn(msg)
     return
   }
+  const reversedMapping = getReversedTableMapping(table)
+  const fieldName = reversedMapping?.[fieldId]
   console.debug(
-    `Fetched record from table ${table.name} with field ${String(fieldMapping)} matching ${value}`
+    `Fetched record from table ${table.name} with value of field ${fieldName} matching ${value}`
   )
   return record
 }
 
-const getFieldId = (fieldId: string | string[] | undefined): string => {
-  if (!fieldId) {
-    throw new Error('No field ID for given mapping found in table')
-  }
-  if (Array.isArray(fieldId)) {
-    if (fieldId.length === 0) {
-      throw new Error('Field ID array is empty')
+// we can use the mapping returned here to get field names from field IDs for a given table
+export const getReversedTableMapping = 
+  <T extends Table<I>, I extends Item>(table: T): ReversedTableMapping<I> | undefined => {
+    if (!table.mappings) {
+      console.warn(`No mappings found for ${table.name} table - cannot generate reverse mappings`)
+      return
     }
-    return fieldId[0]
+    const mappings = table.mappings as TableMapping<I>
+    const reversedMapping = {} as ReversedTableMapping<I>
+    for (const [k, v] of Object.entries(mappings)) {
+      reversedMapping[v as string] = k as ItemKeys<I>
+    }
+
+    return reversedMapping
   }
-  return fieldId
-}
