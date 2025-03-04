@@ -1,7 +1,6 @@
 import { isNotNil, round  } from 'es-toolkit'
 import { kebabCase } from 'es-toolkit/string'
-import { MoveLeft } from 'lucide-react'
-import { unstable_cache as cache } from 'next/cache'
+import { Image as ImageIcon, MoveLeft  } from 'lucide-react'
 import { PHASE_PRODUCTION_BUILD } from 'next/constants'
 import Head from 'next/head'
 import Image from 'next/image'
@@ -19,44 +18,54 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-// import { Separator } from '@/components/ui/separator'
 import {
   Table,
   TableBody,
   TableCell,
+  TableHead,
+  TableHeader,
   TableRow,
 } from '@/components/ui/table'
 import {
+  getCachedScan,
   getRecordByField,
   getRecordById,
-  scanTable
 } from '@/helpers/airtable'
-import { getUniquePartFromUid } from '@/helpers/data'
 import {
   type Component,
+  type Material,
   type OrderBase,
-  OrderBaseTable,
-  Project,
+  type Project,
   componentsTable,
+  materialsTable,
+  orderBaseTable,
   projectsTable
 } from '@/lib/schema'
-import windowBlueprint from 'public/window-xl4.svg'
 
 const MAX_DECIMAL_PLACE_PRECISION = 1
 
 // we use ISR to generate static passports at build and fetch fresh data at request time as needed
-export const revalidate = 60
+export const revalidate = 180
 
-// we cache the scan to reduce requests to Airtable's API and avoid being throttled at build time
-const getCachedTable = cache(scanTable, [], { revalidate: 60 })
+// we give each scan a separate tag to enable us to clear cache on demand (using revalidatePath)
+const getComponentsCache = getCachedScan<Component>(componentsTable, 'components', 180)
+const getProjectsCache = getCachedScan<Project>(projectsTable, 'projects', 900)
+const getOrdersCache = getCachedScan<OrderBase>(orderBaseTable, 'orders', 900)
+const getMaterialsCache = getCachedScan<Material>(materialsTable, 'materials', 900)
 
 // this runs once, at build time, to prepare static pages for every component
 export async function generateStaticParams(): Promise<{ uid: string }[]> {
-  const components = (await getCachedTable(componentsTable)) as Component[]
+  // kick off table scans for purpose of caching, to be accessed during page builds
+  const getComponentsPromise = getComponentsCache()
+  getProjectsCache()
+  getOrdersCache()
+  getMaterialsCache()
+  // wait for component scan to complete
+  const components = await getComponentsPromise
   // ignore any records without UID (none should exist anyway)
   return components
-    .filter((component) => isNotNil(component.componentUID))
-    .map((component) => ({ uid: component.componentUID as string }))
+    .filter((component) => isNotNil(component.componentUid))
+    .map((component) => ({ uid: component.componentUid as string }))
 }
 
 export default async function Page({
@@ -71,8 +80,8 @@ export default async function Page({
   let component
   if (process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD) {
     // if generating at build time, use cached scan of components table
-    const components = (await getCachedTable(componentsTable)) as Component[]
-    component = components.find((component) => component.componentUID === uid)
+    const components = await getComponentsCache()
+    component = components.find((component) => component.componentUid === uid)
     if (!component) {
       console.warn(`No component with UID ${uid} found in table:`)
       notFound()
@@ -96,23 +105,43 @@ export default async function Page({
     }
   }
 
-  // TODO: also get projects & blocks from cached scans if at build (again, to avoid throttling)
+  // TODO: also get projects & blocks from cached scans if at build (or generally, since we revalidate less often?)
   // fetch data for project of which this component is a member
   let project
   if (component.project?.[0]) {
     project = await getRecordById(projectsTable, component.project[0]) as Project
   }
   
-  // if component is from a library, it likely has an image associated, so we also grab the order
+  // if component is from a block library, it likely has an image associated, so we also grab the order
+  // TODO: do we need order for anything else?
   let order
   if (isNotNil(component.librarySource)) {
-    console.log('LIBRARY BLOCK')
-    order = await getRecordById(OrderBaseTable, component.orderBase[0]) as OrderBase
+    order = await getRecordById(orderBaseTable, component.orderBase[0]) as OrderBase
+  }
+
+  interface Materials {
+    timber?: Material,
+    insulation?: Material,
+    fixings?: Material,
+  }
+
+  const materials: Materials = {}
+  if (isNotNil(component.materialsTimber?.[0])) {
+    materials.timber = await getRecordById(materialsTable, component.materialsTimber[0])
+  }
+  if (isNotNil(component.materialsInsulation?.[0])) {
+    materials.insulation = await getRecordById(materialsTable, component.materialsInsulation[0])
+  }
+  if (isNotNil(component.materialsFixings?.[0])) {
+    materials.fixings = await getRecordById(materialsTable, component.materialsFixings[0])
   }
 
   console.log('component', component)
   console.log('project', project)
   console.log('order', order)
+  console.log ('materials.timber', materials.timber)
+  console.log ('materials.insulation', materials.insulation)
+  console.log ('materials.fixings', materials.fixings)
 
   return (
     // TODO: move Suspense/spinner up to root layout level?
@@ -132,25 +161,24 @@ export default async function Page({
       <div className="flex flex-col space-y-2">
         <h2>{component.componentName}</h2>
         <div className="flex justify-between">
-          <p>#{getUniquePartFromUid(component.componentUid)}</p>
+          <p>#{component.componentUid}</p>
           {/* FIXME: get badge colour assignment working */}
           <Badge className={kebabCase(component.status)}>{component.status}</Badge>
         </div>
       </div>
 
-      {/* TODO: find a more suitable placeholder (currently using WINDOW-XL4 skylark block) */}
-      <Card className="relative w-full h-64 lg:h-96">
-        <Image
-          className="object-contain object-center rounded-md p-2"
-          src={order ? order.mainImage[0] : windowBlueprint}
-          alt={order ?
-            `Orthogonal diagram of ${component.componentName} block` :
-            'Placeholder - orthogonal diagram of WINDOW-XL4 block'
-          }
-          // images are svg so no need to optimise (alternatively we could set dangerouslyAllowSVG in next config)
-          unoptimized 
-          fill
-        />
+      <Card className="relative w-full h-64 lg:h-96 flex justify-center items-center">
+        {order?.mainImage ?
+          <Image
+            className="object-contain object-center rounded-md p-2"
+            src={order.mainImage[0]}
+            alt={`Orthogonal diagram of ${component.componentName}`}
+            // images are svg so no need to optimise (alternatively we could set dangerouslyAllowSVG in next config)
+            unoptimized
+            priority
+            fill
+          /> : <ImageIcon className="w-full h-16 lg:h-24 opacity-70" />
+        }
       </Card>
 
       {/* SAVE POINT - IGNORE EVERYTHING ABOVE THIS LINE */}
@@ -183,7 +211,7 @@ export default async function Page({
                   </TableRow>}
                   {isNotNil(component.totalGwp) && <TableRow>
                     {/* TODO: do we need to give time horizon for this GWP measurement, e.g. `GWP-20` */}
-                    <TableCell className="font-medium">GWP</TableCell>
+                    <TableCell className="font-medium">Global warming potential</TableCell>
                     <TableCell className="text-right">{round(component.totalGwp, MAX_DECIMAL_PLACE_PRECISION)}</TableCell>
                   </TableRow>}
                   {isNotNil(component.totalDistanceTravelled) && <TableRow>
@@ -206,18 +234,73 @@ export default async function Page({
               <h3>Materials</h3>
             </AccordionTrigger>
             <AccordionContent>
-              <div className="flex flex-col space-y-2">
-                <div className="flex justify-between">
-                  <span>OSB</span>
-                  <span>producer</span>
-                  <span>CO₂</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Insulation</span>
-                  <span>producer</span>
-                  <span>CO₂</span>
-                </div>
-              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead></TableHead>
+                    <TableHead>Material</TableHead>
+                    <TableHead>Producer</TableHead>
+                    <TableHead className="text-right">CO<sub>2</sub></TableHead>
+                  </TableRow>
+                </TableHeader>
+                {/* TODO: make the below thumbnail images expandable for inspection, and extract as separate component */}
+                <TableBody>
+                  {isNotNil(materials.timber) && <TableRow>
+                    <TableCell>
+                      <div className="relative w-6 h-6 lg:w-10 lg:h-10 flex justify-center items-center">
+                        {materials.timber.thumbnail ?
+                          <Image
+                            className="object-cover object-center rounded-full"
+                            src={materials.timber.thumbnail[0]}
+                            alt="Thumbnail of material used for timber"
+                            sizes="(min-width: 1024px) 40px, 24px"
+                            fill
+                          /> : <ImageIcon className="opacity-70" />
+                        }
+                      </div>
+                    </TableCell>
+                    <TableCell>{materials.timber.materialName}</TableCell>
+                    <TableCell>{materials.timber.producer}</TableCell>
+                    <TableCell className="text-right">{materials.timber.gwp}</TableCell>
+                  </TableRow>}
+                  {isNotNil(materials.insulation) && <TableRow>
+                    <TableCell>
+                      <div className="relative w-6 h-6 lg:w-10 lg:h-10 flex justify-center items-center">
+                        {materials.insulation.thumbnail ?
+                          <Image
+                            className="object-cover object-center rounded-full"
+                            src={materials.insulation.thumbnail[0]}
+                            alt="Thumbnail of material used for insulation"
+                            sizes="(min-width: 1024px) 40px, 24px"
+                            fill
+                          /> : <ImageIcon className="opacity-70" />
+                        }
+                      </div>
+                    </TableCell>
+                    <TableCell>{materials.insulation.materialName}</TableCell>
+                    <TableCell>{materials.insulation.producer}</TableCell>
+                    <TableCell className="text-right">{materials.insulation.gwp}</TableCell>
+                  </TableRow>}
+                  {isNotNil(materials.fixings) && <TableRow>
+                    <TableCell>
+                      <div className="relative w-6 h-6 lg:w-10 lg:h-10 flex justify-center items-center">
+                        {materials.fixings.thumbnail ?
+                          <Image
+                            className="object-cover object-center rounded-full"
+                            src={materials.fixings.thumbnail[0]}
+                            alt="Thumbnail of material used for fixings"
+                            sizes="(min-width: 1024px) 40px, 24px"
+                            fill
+                          /> : <ImageIcon className="opacity-70" />
+                        }
+                      </div>
+                    </TableCell>
+                    <TableCell>{materials.fixings.materialName}</TableCell>
+                    <TableCell>{materials.fixings.producer}</TableCell>
+                    <TableCell className="text-right">{materials.fixings.gwp}</TableCell>
+                  </TableRow>}
+                </TableBody>
+              </Table>
             </AccordionContent>
           </section>
         </AccordionItem>

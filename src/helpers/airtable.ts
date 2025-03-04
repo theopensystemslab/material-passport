@@ -6,6 +6,7 @@ import {
   type Table,
 } from 'airtable-ts'
 import { isNil } from 'es-toolkit'
+import { unstable_cache as cache } from 'next/cache'
 
 import {
   ItemKeys,
@@ -38,6 +39,18 @@ export const scanTable = async <I extends Item>(table: Table<I>): Promise<I[]> =
   const db = getAirtableDb()
   console.debug(`Scanning table: ${table.name}`)
   return await db.scan(table)
+}
+
+// we provide a factory to return cached table scans to reduce requests to Airtable's API and avoid being throttled
+export const getCachedScan = <I extends Item>(table: Table<I>, cacheTag: string, revalidationSeconds: number) => {
+  return cache(
+    async (): Promise<I[]> => scanTable(table),
+    [],
+    {
+      tags: [cacheTag],
+      revalidate: revalidationSeconds,
+    },
+  )
 }
 
 interface GetRecordOptions {

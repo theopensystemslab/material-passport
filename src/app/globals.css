@@ -94,6 +94,10 @@
   a {
     @apply hover:underline hover:underline-offset-4;
   }
+
+  td {
+    @apply lg:text-lg;
+  }
 }
 
 @layer base {
