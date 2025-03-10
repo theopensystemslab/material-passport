@@ -32,7 +32,7 @@ export async function GET(req: NextRequest): Promise<Response> {
 
     let ordersSynced = 0, ordersIgnored = 0, recordsCreated = 0
     for (const order of orders) {
-      if (order.isSynced) { 
+      if (order.synced) { 
         console.debug(`Order ${order.orderRef} (${order.id}) is already synced`)
         continue
       }
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest): Promise<Response> {
         recordsCreated++
       }
       // finally, mark the order as synced to avoid duplicating records on next run
-      await db.update(orderBaseTable, { id: order.id, isSynced: true })
+      await db.update(orderBaseTable, { id: order.id, synced: true })
       console.log(`Successfully created ${order.quantity} new component records from order ${order.orderRef}`)
       ordersSynced++
     }
