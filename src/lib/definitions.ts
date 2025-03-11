@@ -12,6 +12,12 @@ export enum ComponentStatus {
 
 // gist some types here to build on the schema.ts file, for use in the airtable helper
 // we know in practice that keys on an Item are strings - but we have to convince tsc!
-export type ItemKeys<I> = Extract<keyof Omit<I, 'id'>, string>
-export type TableMapping<I> = Record<ItemKeys<I>, string>
-export type ReversedTableMapping<I> = Record<string, ItemKeys<I>>
+export type TableMappingKeys<I> = Extract<keyof Omit<I, 'id'>, string>
+export type TableMapping<I> = Record<TableMappingKeys<I>, string>
+export type ReversedTableMapping<I> = Record<string, TableMappingKeys<I>>
+
+// type utility to extract union of value types for a given typed object
+export type ValueOf<T> = T[keyof T]
+
+// type utility to consolidate nil types
+export type Nil = null | undefined

@@ -8,12 +8,16 @@ import {
 import { isNil } from 'es-toolkit'
 import { unstable_cache as cache } from 'next/cache'
 
-import {
-  ItemKeys,
+import type {
+  Nil,
   ReversedTableMapping,
-  TableMapping
+  TableMapping,
+  TableMappingKeys,
+  ValueOf,
 } from '@/lib/definitions'
 import { componentsTable } from '@/lib/schema'
+
+const DEFAULT_TABLE_REVALIDATION_PERIOD_SECONDS = 900
 
 export const getAirtableDb = (): AirtableTs => {
   // NB. your AIRTABLE_API_KEY should be a PAT, but is referred to as an API key throughout the docs/code
@@ -42,12 +46,15 @@ export const scanTable = async <I extends Item>(table: Table<I>): Promise<I[]> =
 }
 
 // we provide a factory to return cached table scans to reduce requests to Airtable's API and avoid being throttled
-export const getCachedScan = <I extends Item>(table: Table<I>, cacheTag: string, revalidationSeconds: number) => {
+export const getCachedScan = <I extends Item>(
+  table: Table<I>,
+  revalidationSeconds: number = DEFAULT_TABLE_REVALIDATION_PERIOD_SECONDS,
+): () => Promise<I[]> => {
   return cache(
     async (): Promise<I[]> => scanTable(table),
-    [], // shouldn't need to extend cache key, since table arg is sufficient to clarify cache context
+    [table.name], // use table name as cache key (and cache tag), since actual table arg is closed over
     {
-      tags: [cacheTag],
+      tags: [table.name],
       revalidate: revalidationSeconds,
     },
   )
@@ -57,11 +64,37 @@ interface GetRecordOptions {
   shouldThrow?: boolean
 }
 
+// we will generally use a reversed table mapping to get field names to pass in here (unless searching directly on record ID)
+export const getRecordFromScan = async <I extends Item>(
+  cachedScan: ReturnType<typeof getCachedScan<I>>,
+  value: ValueOf<I>,
+  fieldNameToMatch: keyof I | 'id' | Nil = 'id',
+  { shouldThrow = false }: GetRecordOptions = {},
+): Promise<I | Nil> => {
+  if (isNil(fieldNameToMatch)) {
+    const msg = 'No field name passed'
+    if (shouldThrow) throw new Error(msg)
+    console.warn(msg)
+    return undefined
+  }
+  const records = await cachedScan()
+  const record = records.find((record) => record[fieldNameToMatch] === value)
+  if (isNil(record)) {
+    const msg = `No record with field ${String(fieldNameToMatch)} having value ${value} found in table`
+    if (shouldThrow) throw new Error(msg)
+    console.warn(msg)
+    return null
+  }
+  console.debug(`Found component with field ${String(fieldNameToMatch)} having value ${value} in table`)
+  return record
+}
+
+
 export const getRecordById = async <I extends Item>(
   table: Table<I>,
   recordId: string,
   { shouldThrow = false }: GetRecordOptions = {},
-): Promise<I | undefined> => {
+): Promise<I | null> => {
   const db = getAirtableDb()
   console.debug(`Fetching record ${recordId} from table ${table.name}`)
   const record = await db.get(table, recordId)
@@ -69,11 +102,12 @@ export const getRecordById = async <I extends Item>(
     const msg = `No record found in table ${table.name} with ID: ${recordId}`
     if (shouldThrow) throw new Error(msg)
     console.warn(msg)
-    return
+    return null
   }
   return record
 }
 
+// when using the 'raw' SDK, we can't rely on a table from our schema to provide the base ID, so we allow it to be passed
 interface rawGetRecordOptions {
   shouldThrow?: boolean
   baseId?: string
@@ -144,18 +178,36 @@ export const getRecordByField = async <I extends Item>(
   return record
 }
 
-// we can use the mapping returned here to get field names from field IDs for a given table
+// we can use the mapping returned here to get field names from field IDs, which are less liable to change
 export const getReversedTableMapping = 
-  <T extends Table<I>, I extends Item>(table: T): ReversedTableMapping<I> | undefined => {
+  <T extends Table<I>, I extends Item>(table: T): ReversedTableMapping<I> | null => {
     if (!table.mappings) {
       console.warn(`No mappings found for ${table.name} table - cannot generate reverse mappings`)
-      return
+      return null
     }
     const mappings = table.mappings as TableMapping<I>
     const reversedMapping = {} as ReversedTableMapping<I>
     for (const [k, v] of Object.entries(mappings)) {
-      reversedMapping[v as string] = k as ItemKeys<I>
+      reversedMapping[v as string] = k as TableMappingKeys<I>
     }
 
     return reversedMapping
   }
+
+export const getFieldNameByFieldId = <I extends Item>(
+  table: Table<I>,
+  fieldId: string | Nil,
+): TableMappingKeys<I> | Nil => {
+  if (isNil(fieldId)) {
+    console.warn('No field ID passed')
+    return
+  }
+  const reversedMapping = getReversedTableMapping(table)
+  const fieldName = reversedMapping?.[fieldId]
+  if (isNil(fieldName)) {
+    console.warn(`No field name found for ID ${fieldId} in table ${table.name}`)
+    return null
+  }
+  console.debug(`Field name for ID ${fieldId} in table ${table.name} is ${fieldName}`)
+  return fieldName
+}

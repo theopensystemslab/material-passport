@@ -4,7 +4,11 @@ import {
   round
 } from 'es-toolkit'
 import { kebabCase } from 'es-toolkit/string'
-import { Image as ImageIcon, MoveLeft  } from 'lucide-react'
+import {
+  Check,
+  Image as ImageIcon,
+  MoveLeft
+} from 'lucide-react'
 import { PHASE_PRODUCTION_BUILD } from 'next/constants'
 import Head from 'next/head'
 import Image from 'next/image'
@@ -30,12 +34,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Timeline, TimelineItem } from '@/components/ui/timeline'
 import {
   getCachedScan,
+  getFieldNameByFieldId,
   getRecordByField,
-  getRecordById,
+  getRecordFromScan,
 } from '@/helpers/airtable'
-import { ComponentStatus } from '@/lib/definitions'
+import { ComponentStatus, type Nil } from '@/lib/definitions'
 import {
   type Component,
   type Material,
@@ -50,7 +56,7 @@ import { getComponentStatusEnum } from '@/lib/utils'
 
 const MAX_DECIMAL_PLACE_PRECISION: number = 1
 const STATUS_TRANSITIONS: Record<ComponentStatus, ComponentStatus[]> = {
-  [ComponentStatus.DesignInProgress]: [ComponentStatus.ReadyForProduction],
+  [ComponentStatus.DesignInProgress]: [],
   [ComponentStatus.ReadyForProduction]: [ComponentStatus.Manufactured],
   [ComponentStatus.Manufactured]: [ComponentStatus.InTransit, ComponentStatus.ReceivedOnSite],
   [ComponentStatus.InTransit]: [ComponentStatus.ReceivedOnSite],
@@ -63,18 +69,19 @@ const STATUS_TRANSITIONS: Record<ComponentStatus, ComponentStatus[]> = {
 export const revalidate = 180
 
 // we give each scan a separate tag to enable us to clear cache on demand (using revalidatePath)
-const getComponentsCache = getCachedScan<Component>(componentsTable, 'components', 180)
-const getProjectsCache = getCachedScan<Project>(projectsTable, 'projects', 900)
-const getOrdersCache = getCachedScan<OrderBase>(orderBaseTable, 'orders', 900)
-const getMaterialsCache = getCachedScan<Material>(materialsTable, 'materials', 900)
+const componentsCache = getCachedScan<Component>(componentsTable, 180)
+const projectsCache = getCachedScan<Project>(projectsTable)
+const ordersCache = getCachedScan<OrderBase>(orderBaseTable)
+const materialsCache = getCachedScan<Material>(materialsTable)
 
 // this runs once, at build time, to prepare static pages for every component
 export async function generateStaticParams(): Promise<{ uid: string }[]> {
   // kick off table scans for purpose of caching, to be accessed during page builds
-  const getComponentsPromise = getComponentsCache()
-  getProjectsCache()
-  getOrdersCache()
-  getMaterialsCache()
+  // TODO: demonstrate to my satisfaction that the cache is actually being hit on repeated table scans
+  const getComponentsPromise = componentsCache()
+  projectsCache()
+  ordersCache()
+  materialsCache()
   // wait for component scan to complete
   const components = await getComponentsPromise
   // ignore any records without UID (none should exist anyway)
@@ -93,63 +100,83 @@ export default async function Page({
   const { uid } = await params
 
   let component
-  if (process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD) {
-    // if generating at build time, use cached scan of components table
-    const components = await getComponentsCache()
-    component = components.find((component) => component.componentUid === uid)
-    if (!component) {
-      console.warn(`No component with UID ${uid} found in table:`)
-      notFound()
-    }
-    console.debug(`Found component ${uid} in full table data`)
-  } else {
-    // if generating at request time (or in development), fetch component directly
-    try {
-      component = await getRecordByField(
+  try {
+    if (process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD) {
+      // if generating at build time, use cached scan of components table
+      const componentUidFieldName = getFieldNameByFieldId(componentsTable, componentsTable.mappings?.componentUid)
+      component = await getRecordFromScan<Component>(
+        componentsCache,
+        uid,
+        componentUidFieldName,
+        { shouldThrow: true },
+      )
+    } else {
+      // if generating at request time (or in development), fetch component directly
+      component = await getRecordByField<Component>(
         componentsTable,
         componentsTable.mappings?.componentUid,
         uid,
         { shouldThrow: true },
-      ) as Component
-      if (component.componentUid !== uid) {
-        throw new Error(`Fetched wrong record: ${component.componentUid} != ${uid}`)
-      }
-    } catch (error) {
-      console.error(`Error fetching component ${uid}:`, error)
-      notFound()
+      )
     }
+    // finally run a type check and validate that we have the correct record
+    if (!component) {
+      throw new Error(`Failed to fetch component with UID ${uid}`)
+    }
+    if (component && component.componentUid !== uid) {
+      throw new Error(`Fetched wrong record: ${component.componentUid} != ${uid}`)
+    }
+  } catch (e) {
+    console.error(e)
+    notFound()
   }
+
   const componentStatus = getComponentStatusEnum(component.status)
 
-  // TODO: also get project, order & materials from cached scans if at build (or generally, since we revalidate these less often?)
-  // fetch data for project of which this component is a member
+  // we also fetch related project, order and material records (but unlike for the component, if any fail, we don't error out)
+  // we always use cached scans here (regardless of env), since these tables change less frequently
   let project
   if (component.project?.[0]) {
-    project = await getRecordById(projectsTable, component.project[0]) as Project
+    project = await getRecordFromScan<Project>(
+      projectsCache,
+      component.project[0],
+    )
+  } else {
+    console.warn(`Component ${uid} has no associated project`)
   }
   
-  // fetch order from which this component was mandated
   let order
-  if (component.project?.[0]) {
-    order = await getRecordById(orderBaseTable, component.orderBase[0]) as OrderBase
+  if (component.orderBase?.[0]) {
+    order = await getRecordFromScan<OrderBase>(ordersCache, component.orderBase[0])
+  } else {
+    console.warn(`Component ${uid} has no associated order`)
   }
 
   interface Materials {
-    timber?: Material,
-    insulation?: Material,
-    fixings?: Material,
+    timber?: Material | Nil,
+    insulation?: Material | Nil,
+    fixings?: Material | Nil,
   }
 
   // fetch various materials used in this component
   const materials: Materials = {}
-  if (isNotNil(component.materialsTimber?.[0])) {
-    materials.timber = await getRecordById(materialsTable, component.materialsTimber[0])
+  if (component.materialsTimber?.[0]) {
+    materials.timber = await getRecordFromScan<Material>(
+      materialsCache, component.materialsTimber[0])
+  } else {
+    console.warn(`Component ${uid} has no associated timber material`)
   }
-  if (isNotNil(component.materialsInsulation?.[0])) {
-    materials.insulation = await getRecordById(materialsTable, component.materialsInsulation[0])
+  if (component.materialsInsulation?.[0]) {
+    materials.insulation = await getRecordFromScan<Material>(
+      materialsCache, component.materialsInsulation[0])
+  } else {
+    console.warn(`Component ${uid} has no associated insulation material`)
   }
-  if (isNotNil(component.materialsFixings?.[0])) {
-    materials.fixings = await getRecordById(materialsTable, component.materialsFixings[0])
+  if (component.materialsFixings?.[0]) {
+    materials.fixings = await getRecordFromScan<Material>(
+      materialsCache, component.materialsFixings[0])
+  } else {
+    console.warn(`Component ${uid} has no associated fixings material`)
   }
 
   // FIXME: remove these logs - just for dev purposes
@@ -362,24 +389,27 @@ export default async function Page({
               <h3>History</h3>
             </AccordionTrigger>
             <AccordionContent>
-              <div>
-                <p className="text-sm font-medium">1 Jan 2025</p>
-                <p>Event</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium">12 Dec 2024</p>
-                <p>Event</p>
-                <p className="text-sm text-muted-foreground">
-                  Description written as a little paragraph
-                </p>
-              </div>
-              <div>
-                <p className="text-sm font-medium">2 Dec 2024</p>
-                <p>Event</p>
-                <p className="text-sm text-muted-foreground">
-                  Description written as a little paragraph
-                </p>
-              </div>
+              <Timeline>
+                <TimelineItem
+                  date="2024-01-01"
+                  title="Feature Released"
+                  description="New timeline component is now available"
+                  icon={<Check />}
+                  status="completed"
+                />
+                <TimelineItem
+                  date="2024-01-01"
+                  title="In Progress"
+                  description="Working on documentation"
+                  status="in-progress"
+                />
+                <TimelineItem
+                  date="2024-01-01"
+                  title="Upcoming"
+                  description="Planning future updates"
+                  status="pending"
+                />
+              </Timeline>
             </AccordionContent>
           </section>
         </AccordionItem>
