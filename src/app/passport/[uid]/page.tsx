@@ -1,4 +1,8 @@
-import { isNotNil, round  } from 'es-toolkit'
+import {
+  isNotNil,
+  lowerCase,
+  round
+} from 'es-toolkit'
 import { kebabCase } from 'es-toolkit/string'
 import { Image as ImageIcon, MoveLeft  } from 'lucide-react'
 import { PHASE_PRODUCTION_BUILD } from 'next/constants'
@@ -31,6 +35,7 @@ import {
   getRecordByField,
   getRecordById,
 } from '@/helpers/airtable'
+import { ComponentStatus } from '@/lib/definitions'
 import {
   type Component,
   type Material,
@@ -41,8 +46,18 @@ import {
   orderBaseTable,
   projectsTable
 } from '@/lib/schema'
+import { getComponentStatusEnum } from '@/lib/utils'
 
-const MAX_DECIMAL_PLACE_PRECISION = 1
+const MAX_DECIMAL_PLACE_PRECISION: number = 1
+const STATUS_TRANSITIONS: Record<ComponentStatus, ComponentStatus[]> = {
+  [ComponentStatus.DesignInProgress]: [ComponentStatus.ReadyForProduction],
+  [ComponentStatus.ReadyForProduction]: [ComponentStatus.Manufactured],
+  [ComponentStatus.Manufactured]: [ComponentStatus.InTransit, ComponentStatus.ReceivedOnSite],
+  [ComponentStatus.InTransit]: [ComponentStatus.ReceivedOnSite],
+  [ComponentStatus.ReceivedOnSite]: [ComponentStatus.Installed],
+  [ComponentStatus.Installed]: [ComponentStatus.InUse],
+  [ComponentStatus.InUse]: [],
+}
 
 // we use ISR to generate static passports at build and fetch fresh data at request time as needed
 export const revalidate = 180
@@ -104,18 +119,18 @@ export default async function Page({
       notFound()
     }
   }
+  const componentStatus = getComponentStatusEnum(component.status)
 
-  // TODO: also get projects & blocks from cached scans if at build (or generally, since we revalidate less often?)
+  // TODO: also get project, order & materials from cached scans if at build (or generally, since we revalidate these less often?)
   // fetch data for project of which this component is a member
   let project
   if (component.project?.[0]) {
     project = await getRecordById(projectsTable, component.project[0]) as Project
   }
   
-  // if component is from a block library, it likely has an image associated, so we also grab the order
-  // TODO: do we need order for anything else?
+  // fetch order from which this component was mandated
   let order
-  if (isNotNil(component.librarySource)) {
+  if (component.project?.[0]) {
     order = await getRecordById(orderBaseTable, component.orderBase[0]) as OrderBase
   }
 
@@ -125,6 +140,7 @@ export default async function Page({
     fixings?: Material,
   }
 
+  // fetch various materials used in this component
   const materials: Materials = {}
   if (isNotNil(component.materialsTimber?.[0])) {
     materials.timber = await getRecordById(materialsTable, component.materialsTimber[0])
@@ -136,12 +152,10 @@ export default async function Page({
     materials.fixings = await getRecordById(materialsTable, component.materialsFixings[0])
   }
 
+  // FIXME: remove these logs - just for dev purposes
   console.log('component', component)
   console.log('project', project)
   console.log('order', order)
-  console.log ('materials.timber', materials.timber)
-  console.log ('materials.insulation', materials.insulation)
-  console.log ('materials.fixings', materials.fixings)
 
   return (
     // TODO: move Suspense/spinner up to root layout level?
@@ -168,7 +182,7 @@ export default async function Page({
       </div>
 
       <Card className="relative w-full h-64 lg:h-96 flex justify-center items-center">
-        {order?.mainImage ?
+        {order?.mainImage?.[0] ?
           <Image
             className="object-contain object-center rounded-md p-2"
             src={order.mainImage[0]}
@@ -180,12 +194,8 @@ export default async function Page({
           /> : <ImageIcon className="w-full h-16 lg:h-24 opacity-70" />
         }
       </Card>
-
-      {/* SAVE POINT - IGNORE EVERYTHING ABOVE THIS LINE */}
-
       {/* we use the powerful `asChild` flag (from shadcn/Radix) to enforce semantic html */}
       {/* https://www.radix-ui.com/primitives/docs/guides/composition */}
-      {/* TODO: decide which accordions should be expanded by default on page load */}
       <Accordion type="multiple" defaultValue={['info']}>
         <AccordionItem asChild value="info">
           <section>
@@ -248,7 +258,7 @@ export default async function Page({
                   {isNotNil(materials.timber) && <TableRow>
                     <TableCell>
                       <div className="relative w-6 h-6 lg:w-10 lg:h-10 flex justify-center items-center">
-                        {materials.timber.thumbnail ?
+                        {materials.timber.thumbnail?.[0] ?
                           <Image
                             className="object-cover object-center rounded-full"
                             src={materials.timber.thumbnail[0]}
@@ -266,7 +276,7 @@ export default async function Page({
                   {isNotNil(materials.insulation) && <TableRow>
                     <TableCell>
                       <div className="relative w-6 h-6 lg:w-10 lg:h-10 flex justify-center items-center">
-                        {materials.insulation.thumbnail ?
+                        {materials.insulation.thumbnail?.[0] ?
                           <Image
                             className="object-cover object-center rounded-full"
                             src={materials.insulation.thumbnail[0]}
@@ -284,7 +294,7 @@ export default async function Page({
                   {isNotNil(materials.fixings) && <TableRow>
                     <TableCell>
                       <div className="relative w-6 h-6 lg:w-10 lg:h-10 flex justify-center items-center">
-                        {materials.fixings.thumbnail ?
+                        {materials.fixings.thumbnail?.[0] ?
                           <Image
                             className="object-cover object-center rounded-full"
                             src={materials.fixings.thumbnail[0]}
@@ -311,7 +321,7 @@ export default async function Page({
             </AccordionTrigger>
             <AccordionContent>
               <Table>
-                {/* TODO: add switch logic to provide custom versions in case  */}
+                {/* TODO: add switch logic to provide custom versions in case they exist (prefer custom over github!) */}
                 <TableBody>
                   {order?.githubModelDetailedFromLibrarySource && <TableRow>
                     <TableCell className="font-medium">3D model</TableCell>
@@ -343,6 +353,9 @@ export default async function Page({
             </AccordionContent>
           </section>
         </AccordionItem>
+
+        {/* SAVE POINT - IGNORE EVERYTHING ABOVE THIS LINE */}
+
         <AccordionItem asChild value="history">
           <section>
             <AccordionTrigger>
@@ -372,10 +385,15 @@ export default async function Page({
         </AccordionItem>
       </Accordion>
 
+      {/* TODO: make available actions dependent on profile type (e.g. manufacturer, installer, owner etc.) */}
       {/* TODO: make this button do something! (via server action) */}
-      {/* https://nextjs.org/docs/app/building-your-application/data-fetching/server-actions-and-mutations */}
+      {/* 2. make button do appropriate action (not yet including print label) */}
       <div className="flex flex-col space-y-2">
-        <Button variant="default">Action</Button>
+        {componentStatus === ComponentStatus.ReadyForProduction && 
+          <Button variant="default">Print label</Button>}
+        {STATUS_TRANSITIONS[componentStatus].map((statusTransition, i) => (
+          <Button key={i} variant="default">Mark as {lowerCase(statusTransition)}</Button>
+        ))}
       </div>
     </Suspense>
   )
