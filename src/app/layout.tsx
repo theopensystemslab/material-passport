@@ -1,36 +1,42 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+import { type ReactNode } from 'react'
 
-import ProfileButton from "./ProfileButton";
-import Footer from "./Footer"
-import "./globals.css";
+import { Footer } from '@/components/Footer'
+import { Header } from '@/components/Header'
+import './globals.css'
+
 
 const interSans = Inter({
-  variable: "--font-inter-sans",
-  subsets: ["latin"],
-});
+  variable: '--font-inter-sans',
+  subsets: ['latin'],
+})
 
 export const metadata: Metadata = {
-  title: "Component Passports",
-  description: "Track your WikiHouse blocks all the way home",
-};
+  title: 'Component Passports',
+  description: 'Track your WikiHouse blocks all the way home',
+}
 
+// we implement a minimal but decisive layout for full app here, leaving more specific layout/styling to individual pages
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: ReactNode;
 }>) {
   return (
     <html lang="en">
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      </head>
       <body
-        className={`${interSans.variable} antialiased bg-background text-foreground flex flex-col min-h-screen justify-between`}
+        className={`${interSans.variable} antialiased bg-background text-foreground flex flex-col min-h-screen justify-start`}
       >
-          <main className="flex flex-col p-8 pb-20 gap-16 mb-auto">
-            <ProfileButton />
-            {children}
-          </main>
-          <Footer />
+        <Header />
+        <main className="flex flex-col flex-1 container max-w-6xl mx-auto mb-auto p-8 pt-4 gap-4">
+          {children}
+        </main>
+        <Footer />
       </body>
     </html>
-  );
+  )
 }

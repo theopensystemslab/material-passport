@@ -29,6 +29,19 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
+    /* colour palette for component statuses: level 6 + 7 values from https://hypejunction.github.io/color-wizard/ */
+    --status-yellow-6: 39, 80%, 50%;
+    --status-yellow-7: 39, 80%, 41%;
+    --status-teal-6: 162, 80%, 50%;
+    --status-teal-7: 162, 80%, 41%;
+    --status-cyan-6: 188, 80%, 50%;
+    --status-cyan-7: 188, 80%, 41%;
+    --status-blue-6: 208, 80%, 50%;
+    --status-blue-7: 208, 80%, 41%;
+    --status-indigo-6: 255, 80%, 50%;
+    --status-indigo-7: 230, 80%, 41%;
+    --status-green-6: 131, 80%, 50%;
+    --status-green-7: 131, 80%, 41%;
   }
 
   .dark {
@@ -63,20 +76,79 @@
   }
 
   h1 {
-    @apply scroll-m-8 text-2xl font-extrabold tracking-tight lg:text-3xl
+    @apply scroll-m-8 text-2xl font-extrabold tracking-tight lg:text-4xl;
   }
 
   h2 {
-    @apply scroll-m-8 border-b pb-2 text-xl font-semibold tracking-tight first:mt-0 lg:text-2xl
+    @apply scroll-m-8 border-b pb-2 text-xl font-semibold tracking-tight first:mt-0 lg:text-3xl;
   }
 
   h3 {
-    @apply scroll-m-8 text-lg font-bold tracking-tight lg:text-xl
+    @apply scroll-m-8 text-lg font-bold tracking-tight lg:text-2xl;
   }
 
   p {
-    @apply lg:text-lg
+    @apply lg:text-lg;
   }
 
+  a {
+    @apply hover:underline hover:underline-offset-4;
+  }
+
+  td {
+    @apply lg:text-lg;
+  }
 }
 
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .ready-for-production {
+    @apply bg-[hsl(var(--status-yellow-6))] !important;
+    &:hover {
+      @apply bg-[hsl(var(--status-yellow-7))] !important;
+    }
+  }
+
+  .manufactured {
+    @apply bg-[hsl(var(--status-teal-6))] !important;
+    &:hover {
+      @apply bg-[hsl(var(--status-teal-7))] !important;
+    }
+  }
+
+  .in-transit {
+    @apply bg-[hsl(var(--status-cyan-6))] !important;
+    &:hover {
+      @apply bg-[hsl(var(--status-cyan-7))] !important;
+    }
+  }
+
+  .received-on-site {
+    @apply bg-[hsl(var(--status-blue-6))] !important;
+    &:hover {
+      @apply bg-[hsl(var(--status-blue-7))] !important;
+    }
+  }
+
+  .installed {
+    @apply bg-[hsl(var(--status-indigo-6))] !important;
+    &:hover {
+      @apply bg-[hsl(var(--status-indigo-7))] !important;
+    }
+  }
+
+  .in-use {
+    @apply bg-[hsl(var(--status-green-6))] !important;
+    &:hover {
+      @apply bg-[hsl(var(--status-green-7))] !important;
+    }
+  }
+}

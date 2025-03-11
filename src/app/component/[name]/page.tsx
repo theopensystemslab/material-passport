@@ -8,5 +8,5 @@ export default async function Component({
   const name = (await params).name
   return (
     <h1>{name}</h1>
-  );
+  )
 }

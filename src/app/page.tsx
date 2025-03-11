@@ -1,4 +1,4 @@
-export default function Splash({
+export default async function Page({
   // params,
   // searchParams,
 }: {
@@ -18,5 +18,5 @@ export default function Splash({
       </h3>
       <p> TEST </p>
     </>
-  );
+  )
 }

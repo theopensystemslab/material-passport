@@ -1,4 +1,4 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   // enable strict mode to encourage best practices
@@ -6,7 +6,18 @@ const nextConfig: NextConfig = {
   experimental: {
     // any turbopack bundler config goes here
     turbo: {}
-  }
-};
+  },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.airtableusercontent.com',
+        // port: '',
+        // pathname: '**',
+        // search: '**',
+      },
+    ]
+  },
+}
 
-export default nextConfig;
+export default nextConfig

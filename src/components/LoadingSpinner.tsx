@@ -1,4 +1,6 @@
-import { cn } from "@/lib/utils";
+import { type JSX } from 'react'
+
+import { cn } from '@/lib/utils'
 
 // see https://github.com/shadcn-ui/ui/discussions/1694#discussioncomment-7851248
 export interface ISVGProps extends React.SVGProps<SVGSVGElement> {
@@ -10,7 +12,7 @@ export const LoadingSpinner = ({
   size = 24,
   className,
   ...props
-}: ISVGProps) => {
+}: ISVGProps): JSX.Element => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -23,9 +25,9 @@ export const LoadingSpinner = ({
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className={cn("animate-spin", className)}
+      className={cn('animate-spin', className)}
     >
       <path d="M21 12a9 9 0 1 1-6.219-8.56" />
     </svg>
-  );
-};
+  )
+}
