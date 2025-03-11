@@ -77,7 +77,6 @@ export interface OrderBase extends Item {
   synced: boolean,
   orderRef: string,
   project: string,
-  isSynced: boolean,
   supplierDomain: string,
 }
 
@@ -158,7 +157,6 @@ export const orderBaseTable: Table<OrderBase> = { // edit
     synced: 'fldINh6Z20m2cINHa',
     orderRef: 'fldeNFo8FmLiQLqUU',
     project: 'fldqWRqEFHnBP45Lc',
-    isSynced: 'fldXCVNBR3NUJ2CNW',
     supplierDomain: 'fld1r116X0VJO5tDL',
   },
   schema: {
@@ -234,7 +232,6 @@ export const orderBaseTable: Table<OrderBase> = { // edit
     synced: 'boolean',
     orderRef: 'string',
     project: 'string',
-    isSynced: 'boolean',
     supplierDomain: 'string',
   },
 };

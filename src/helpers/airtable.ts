@@ -45,7 +45,7 @@ export const scanTable = async <I extends Item>(table: Table<I>): Promise<I[]> =
 export const getCachedScan = <I extends Item>(table: Table<I>, cacheTag: string, revalidationSeconds: number) => {
   return cache(
     async (): Promise<I[]> => scanTable(table),
-    [],
+    [], // shouldn't need to extend cache key, since table arg is sufficient to clarify cache context
     {
       tags: [cacheTag],
       revalidate: revalidationSeconds,

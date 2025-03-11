@@ -310,7 +310,36 @@ export default async function Page({
               <h3>Design</h3>
             </AccordionTrigger>
             <AccordionContent>
-              ???
+              <Table>
+                {/* TODO: add switch logic to provide custom versions in case  */}
+                <TableBody>
+                  {order?.githubModelDetailedFromLibrarySource && <TableRow>
+                    <TableCell className="font-medium">3D model</TableCell>
+                    <TableCell className="text-right">
+                      <a href={order?.githubModelDetailedFromLibrarySource}>
+                        {order?.githubModelDetailedFromLibrarySource.split('/').pop()}
+                      </a>
+                    </TableCell>
+                  </TableRow>}
+                  {order?.githubCuttingFileFromLibrarySource &&
+                  <TableRow>
+                    <TableCell className="font-medium">Production files</TableCell>
+                    <TableCell className="text-right">
+                      <a href={order?.githubCuttingFileFromLibrarySource}>
+                        {order?.githubCuttingFileFromLibrarySource.split('/').pop()}
+                      </a>
+                    </TableCell>
+                  </TableRow>}
+                  {order?.githubAssemblyGuideFromLibrarySource && <TableRow>
+                    <TableCell className="font-medium">Assembly manual</TableCell>
+                    <TableCell className="text-right">
+                      <a href={order?.githubAssemblyGuideFromLibrarySource}>
+                        {order?.githubAssemblyGuideFromLibrarySource.split('/').pop()}
+                      </a>
+                    </TableCell>
+                  </TableRow>}
+                </TableBody>
+              </Table>
             </AccordionContent>
           </section>
         </AccordionItem>
