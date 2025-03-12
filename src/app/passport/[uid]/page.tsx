@@ -37,7 +37,7 @@ import {
 import { Timeline, TimelineItem } from '@/components/ui/timeline'
 import {
   getCachedScan,
-  getFieldNameByFieldId,
+  getFieldNameMemoized,
   getRecordByField,
   getRecordFromScan,
 } from '@/helpers/airtable'
@@ -69,19 +69,21 @@ const STATUS_TRANSITIONS: Record<ComponentStatus, ComponentStatus[]> = {
 export const revalidate = 180
 
 // we give each scan a separate tag to enable us to clear cache on demand (using revalidatePath)
-const componentsCache = getCachedScan<Component>(componentsTable, 180)
-const projectsCache = getCachedScan<Project>(projectsTable)
-const ordersCache = getCachedScan<OrderBase>(orderBaseTable)
-const materialsCache = getCachedScan<Material>(materialsTable)
+const getComponents = getCachedScan<Component>(componentsTable, 180)
+const getProjects = getCachedScan<Project>(projectsTable)
+const getOrders = getCachedScan<OrderBase>(orderBaseTable)
+const getMaterials = getCachedScan<Material>(materialsTable)
+
+// we also get any memoized field name lookups we might need
+const getComponentFieldName = getFieldNameMemoized(componentsTable)
 
 // this runs once, at build time, to prepare static pages for every component
 export async function generateStaticParams(): Promise<{ uid: string }[]> {
   // kick off table scans for purpose of caching, to be accessed during page builds
-  // TODO: demonstrate to my satisfaction that the cache is actually being hit on repeated table scans
-  const getComponentsPromise = componentsCache()
-  projectsCache()
-  ordersCache()
-  materialsCache()
+  const getComponentsPromise = getComponents()
+  getProjects()
+  getOrders()
+  getMaterials()
   // wait for component scan to complete
   const components = await getComponentsPromise
   // ignore any records without UID (none should exist anyway)
@@ -103,9 +105,9 @@ export default async function Page({
   try {
     if (process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD) {
       // if generating at build time, use cached scan of components table
-      const componentUidFieldName = getFieldNameByFieldId(componentsTable, componentsTable.mappings?.componentUid)
+      const componentUidFieldName = getComponentFieldName(componentsTable.mappings?.componentUid)
       component = await getRecordFromScan<Component>(
-        componentsCache,
+        getComponents,
         uid,
         componentUidFieldName,
         { shouldThrow: true },
@@ -138,7 +140,7 @@ export default async function Page({
   let project
   if (component.project?.[0]) {
     project = await getRecordFromScan<Project>(
-      projectsCache,
+      getProjects,
       component.project[0],
     )
   } else {
@@ -147,7 +149,7 @@ export default async function Page({
   
   let order
   if (component.orderBase?.[0]) {
-    order = await getRecordFromScan<OrderBase>(ordersCache, component.orderBase[0])
+    order = await getRecordFromScan<OrderBase>(getOrders, component.orderBase[0])
   } else {
     console.warn(`Component ${uid} has no associated order`)
   }
@@ -162,19 +164,19 @@ export default async function Page({
   const materials: Materials = {}
   if (component.materialsTimber?.[0]) {
     materials.timber = await getRecordFromScan<Material>(
-      materialsCache, component.materialsTimber[0])
+      getMaterials, component.materialsTimber[0])
   } else {
     console.warn(`Component ${uid} has no associated timber material`)
   }
   if (component.materialsInsulation?.[0]) {
     materials.insulation = await getRecordFromScan<Material>(
-      materialsCache, component.materialsInsulation[0])
+      getMaterials, component.materialsInsulation[0])
   } else {
     console.warn(`Component ${uid} has no associated insulation material`)
   }
   if (component.materialsFixings?.[0]) {
     materials.fixings = await getRecordFromScan<Material>(
-      materialsCache, component.materialsFixings[0])
+      getMaterials, component.materialsFixings[0])
   } else {
     console.warn(`Component ${uid} has no associated fixings material`)
   }

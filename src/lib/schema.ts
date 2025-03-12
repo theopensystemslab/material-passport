@@ -580,11 +580,13 @@ export interface Project extends Item {
   totalChassisEstimate: number,
   latitude: number | null, // edit
   longitude: number | null, // edit
-  _10materialprocessing: string[],
+  _10materialprocessing: string,
   statusFromOrderBase: string[],
   statusRollupFromOrderBase: string,
   supplierDomainFromSupplier: string,
   admin: string,
+  simpleModel: string,
+  simpleModelEmbed: string,
 }
 
 export const projectsTable: Table<Project> = {
@@ -624,6 +626,8 @@ export const projectsTable: Table<Project> = {
     statusRollupFromOrderBase: 'fldpQow5HbJxKaldG',
     supplierDomainFromSupplier: 'fldODKakR5PKxKoE4',
     admin: 'fldo0Vj9Rg0ZtUE5e',
+    simpleModel: 'fldn5hR2CLzy2DUqd',
+    simpleModelEmbed: 'fldh5IFLkPKnR4ybC',
   },
   schema: {
     projectName: 'string',
@@ -653,11 +657,13 @@ export const projectsTable: Table<Project> = {
     totalChassisEstimate: 'number',
     latitude: 'number | null', // edit
     longitude: 'number | null', // edit
-    _10materialprocessing: 'string[]',
+    _10materialprocessing: 'string',
     statusFromOrderBase: 'string[]',
     statusRollupFromOrderBase: 'string',
     supplierDomainFromSupplier: 'string',
     admin: 'string',
+    simpleModel: 'string',
+    simpleModelEmbed: 'string',
   },
 };
 

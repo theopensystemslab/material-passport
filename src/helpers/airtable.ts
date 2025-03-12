@@ -6,6 +6,7 @@ import {
   type Table,
 } from 'airtable-ts'
 import { isNil } from 'es-toolkit'
+import { memoize } from 'es-toolkit/function'
 import { unstable_cache as cache } from 'next/cache'
 
 import type {
@@ -85,7 +86,7 @@ export const getRecordFromScan = async <I extends Item>(
     console.warn(msg)
     return null
   }
-  console.debug(`Found component with field ${String(fieldNameToMatch)} having value ${value} in table`)
+  console.debug(`Found record with field ${String(fieldNameToMatch)} having value ${value} in table`)
   return record
 }
 
@@ -118,7 +119,7 @@ export const getRecordIdByField = async (
   fieldId: string,
   value: string | number,
   { shouldThrow = false, baseId = undefined }: rawGetRecordOptions = {},
-): Promise<string | undefined> => {
+): Promise<string | null> => {
   const base = getRawAirtableBase(baseId)
   const table = base(tableId)
   console.debug(`Searching for record in table ${tableId} with field ${fieldId} matching ${value}`)
@@ -132,7 +133,7 @@ export const getRecordIdByField = async (
     const msg = `No record found in table ${tableId} with field ${fieldId} matching ${value}`
     if (shouldThrow) throw new Error(msg)
     console.warn(msg)
-    return
+    return null
   }
   return data[0].id
 }
@@ -142,19 +143,19 @@ export const getRecordByField = async <I extends Item>(
   fieldId: string | undefined,
   value: string | number,
   { shouldThrow = false, baseId = undefined }: rawGetRecordOptions = {},
-): Promise<I | undefined> => {
+): Promise<I | null> => {
   const db = getAirtableDb()
   if (!table.mappings) {
     const msg = `No mappings found for ${table.name} table - cannot reference field ${String(fieldId)}`
     if (shouldThrow) throw new Error(msg)
     console.warn(msg)
-    return
+    return null
   }
   if (!fieldId) {
     const msg = 'No field ID given'
     if (shouldThrow) throw new Error(msg)
     console.warn(msg)
-    return
+    return null
   }
   const recordId = await getRecordIdByField(
     componentsTable.tableId,
@@ -162,45 +163,44 @@ export const getRecordByField = async <I extends Item>(
     value,
     { shouldThrow, baseId },
   )
-  if (!recordId) return
+  // if no record ID returned, error and logging is already handlded in func, so simply return null
+  if (!recordId) return null
   const record = await db.get(table, recordId)
   if (!record) {
     const msg = `Failed to fetch record with ID ${recordId}`
     if (shouldThrow) throw new Error(msg)
     console.warn(msg)
-    return
+    return null
   }
-  const reversedMapping = getReversedTableMapping(table)
-  const fieldName = reversedMapping?.[fieldId]
   console.debug(
-    `Fetched record from table ${table.name} with value of field ${fieldName} matching ${value}`
+    `Fetched record from table ${table.name} with value of field ${fieldId} matching ${value}`
   )
   return record
 }
 
 // we can use the mapping returned here to get field names from field IDs, which are less liable to change
-export const getReversedTableMapping = 
-  <T extends Table<I>, I extends Item>(table: T): ReversedTableMapping<I> | null => {
-    if (!table.mappings) {
-      console.warn(`No mappings found for ${table.name} table - cannot generate reverse mappings`)
-      return null
-    }
-    const mappings = table.mappings as TableMapping<I>
-    const reversedMapping = {} as ReversedTableMapping<I>
-    for (const [k, v] of Object.entries(mappings)) {
-      reversedMapping[v as string] = k as TableMappingKeys<I>
-    }
-
-    return reversedMapping
+export const getReversedTableMapping = <T extends Table<I>, I extends Item>(
+  table: T,
+): ReversedTableMapping<I> | null => {
+  if (!table.mappings) {
+    console.warn(`No mappings found for ${table.name} table - cannot generate reverse mappings`)
+    return null
   }
+  const mappings = table.mappings as TableMapping<I>
+  const reversedMapping = {} as ReversedTableMapping<I>
+  for (const [k, v] of Object.entries(mappings)) {
+    reversedMapping[v as string] = k as TableMappingKeys<I>
+  }
+  return reversedMapping
+}
 
 export const getFieldNameByFieldId = <I extends Item>(
   table: Table<I>,
   fieldId: string | Nil,
-): TableMappingKeys<I> | Nil => {
+): TableMappingKeys<I> | null => {
   if (isNil(fieldId)) {
     console.warn('No field ID passed')
-    return
+    return null
   }
   const reversedMapping = getReversedTableMapping(table)
   const fieldName = reversedMapping?.[fieldId]
@@ -209,5 +209,14 @@ export const getFieldNameByFieldId = <I extends Item>(
     return null
   }
   console.debug(`Field name for ID ${fieldId} in table ${table.name} is ${fieldName}`)
-  return fieldName
+  return fieldName as TableMappingKeys<I>
+}
+
+// we provide a factory for getting memoized field name lookups, to reduce repeated computations
+// this works because field IDs are unique and schema is static in repo
+export const getFieldNameMemoized = <I extends Item>(
+  table: Table<I>,
+) => {
+  // memoizer can only take functions with 0 or 1 args, so we close over given table
+  return memoize((fieldId: string | Nil) => getFieldNameByFieldId(table, fieldId))
 }
