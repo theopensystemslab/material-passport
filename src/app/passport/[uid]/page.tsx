@@ -209,7 +209,7 @@ export default async function Page({
           <Badge className={kebabCase(component.status)}>{component.status}</Badge>
         </div>
       </div>
-
+      {/* TODO: display custom image if available (prefer this!) */}
       <Card className="relative w-full h-64 lg:h-96 flex justify-center items-center">
         {order?.mainImage?.[0] ?
           <Image

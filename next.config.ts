@@ -12,9 +12,12 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: '**.airtableusercontent.com',
-        // port: '',
-        // pathname: '**',
-        // search: '**',
+        port: '',
+      },
+      {
+        protocol: 'https',
+        hostname: 'xuwucd0hn1ls3mxf.public.blob.vercel-storage.com',
+        port: '',
       },
     ]
   },

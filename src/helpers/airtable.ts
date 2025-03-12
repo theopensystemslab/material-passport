@@ -120,8 +120,7 @@ export const getRecordIdByField = async (
   value: string | number,
   { shouldThrow = false, baseId = undefined }: rawGetRecordOptions = {},
 ): Promise<string | null> => {
-  const base = getRawAirtableBase(baseId)
-  const table = base(tableId)
+  const table = getRawAirtableBase(baseId)(tableId)
   console.debug(`Searching for record in table ${tableId} with field ${fieldId} matching ${value}`)
   const formula = `{${fieldId}} = '${value}'`
   console.debug(`Arranging formula: ${formula}`)
