@@ -5,10 +5,10 @@ import { put } from '@vercel/blob'
 import { type NextRequest, NextResponse } from 'next/server'
 
 import { getAirtableDb, getRawAirtableBase } from '@/helpers/airtable'
+import { writePdfToStream } from '@/helpers/pdf'
 import { generateQrDataImage, generateQrPngStream } from '@/helpers/qrcode'
 import { ComponentStatus } from '@/lib/definitions'
 import {
-  type Component,
   type OrderBase,
   componentsTable,
   orderBaseTable,
@@ -16,10 +16,13 @@ import {
 import { getComponentStatusEnum } from '@/lib/utils'
 
 const MATERIAL_PASSPORT_DOMAIN = 'wikihouse.materialpassport.info'
-const QR_CODE_BLOB_FOLDER = 'qr-codes'
+const QR_CODE_BLOB_FOLDER = 'qr-code'
+const PDF_BLOB_FOLDER = 'pdf'
 
-// allow function 120s to run to completion (default is 15 on Pro acct, max is 300)
-export const maxDuration = 120
+// nodejs is the default runtime (alternative being 'edge'), but we declare it explicitly for clarity
+export const runtime = 'nodejs'
+// allow function to run to completion (default is 15 on Pro acct, max is 300)
+export const maxDuration = 240
 // ensure that this route is not cached
 export const dynamic = 'force-dynamic'
 
@@ -28,7 +31,7 @@ const COMPONENT_STATUSES_TO_IGNORE = new Set([
 ])
 
 // route has to be GET to be triggerable by the cron job (POST/PUT would be more appropriate)
-export async function GET(req: NextRequest): Promise<NextResponse> {
+export const GET = async (req: NextRequest): Promise<NextResponse> => {
   // guard against unauthorised triggering of this hook
   if (req.headers.get('Authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return new NextResponse('Unauthorized', { status: 401 })
@@ -37,6 +40,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const db = getAirtableDb()
     const orders: OrderBase[] = await db.scan(orderBaseTable)
 
+    // TODO: keep track of blobs and clean up store at end of run (https://vercel.com/docs/vercel-blob/using-blob-sdk#del)
     let ordersSynced = 0, ordersIgnored = 0, recordsCreated = 0
     for (const order of orders) {
       if (order.synced) { 
@@ -51,37 +55,46 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         continue
       }
       console.debug(`Syncing order ${order.orderRef} (${order.id}) with status ${status}`)
-      // grab id and status from Order base record to populate new record(s) in Components table
-      // NB. most fields in 'Components' are lookups to 'Order base', so don't need to be included here
-      const newRecordData: Partial<Component> = {
-        orderBase: [ order.id ],
-        status: order.status,
-      }
-
+      
       // create the new record(s)
       for (let i = 0; i < order.quantity; i++) {
-        const newComponentRecord = await db.insert(componentsTable, newRecordData)
+        // grab id and status from Order base record to populate new record(s)
+        // NB. most fields in 'Components' are lookups to 'Order base', so don't need to be included here
+        const newComponentRecord = await db.insert(componentsTable, {
+          orderBase: [ order.id ],
+          status: order.status,
+        })
         console.debug(`Record ${i + 1} of ${order.quantity} created with ID: ${newComponentRecord.id}`)
-        // now get the UID, fix the expected URI of the label, encode it in a QR, and update the new record accordingly 
+        // now get the UID, fix the (permanent) URI of the passport, encode it in a QR, build the label, and update the new record accordingly 
         const uid = newComponentRecord.componentUid
-        const labelUri = `${MATERIAL_PASSPORT_DOMAIN}/passport/${uid}/label`
-        const qrDataImage = await generateQrDataImage(labelUri)
+        const passportUri = `${MATERIAL_PASSPORT_DOMAIN}/passport/${uid}`
+        const qrDataImage = await generateQrDataImage(passportUri)
         // we dump QR as png to our dedicated Vercel blob store via in-memory stream, for immediate upload to airtable (which requires a public URL)
-        const duplexMemoryStream = new PassThrough()
-        await generateQrPngStream(duplexMemoryStream, labelUri)
-        const blob = await put(`${QR_CODE_BLOB_FOLDER}/${uid}.png`, duplexMemoryStream, {
+        const qrDuplexMemoryStream = new PassThrough()
+        await generateQrPngStream(qrDuplexMemoryStream, passportUri)
+        const qrBlob = await put(`${QR_CODE_BLOB_FOLDER}/${uid}.png`, qrDuplexMemoryStream, {
           access: 'public',
         })
-        console.debug(`QR code for component UID ${uid} uploaded to blob store: ${blob.url}`)
-        // airtable-ts considers the qrCodePng field (of type Attachment) as readonly, so we use the classic SDK for this part
+        console.debug(`QR code for component ${uid} uploaded to blob store: ${qrBlob.url}`)
+        // we take a similar approach for generating the pdf label, passing the newly generated QR code as png data image
+        const pdfDuplexMemoryStream = new PassThrough()
+        await writePdfToStream(pdfDuplexMemoryStream, newComponentRecord, qrDataImage)
+        const pdfBlob = await put(`${PDF_BLOB_FOLDER}/${uid}.pdf`, pdfDuplexMemoryStream, {
+          access: 'public',
+        })
+        console.debug(`PDF for component ${uid} uploaded to blob store: ${pdfBlob.url}`)
+        // airtable-ts considers the qrCodePng field (of type Attachment) as readonly, so we use the classic SDK for this update
         const table = getRawAirtableBase()(componentsTable.tableId)
         // @ts-expect-error: providing a full Attachment object triggers an INVALID_ATTACHMENT_OBJECT (422) error from the Airtable API, but a URL suffices 
         table.update(newComponentRecord.id, {
           'QR code (png)': [{
-            'url': blob.url,
+            'url': qrBlob.url,
           }],
           'QR code (base64)': qrDataImage,
-          'Label': labelUri,
+          'Passport': passportUri,
+          'Label': [{
+            'url': pdfBlob.url,
+          }],
         })
         console.debug(`Record ${newComponentRecord.id} with UID ${uid} updated with label URI and QR code (png and base64)`)
         recordsCreated++

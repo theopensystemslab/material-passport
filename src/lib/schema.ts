@@ -9,7 +9,7 @@ export interface OrderBase extends Item {
   status: string,
   projectRef: string,
   projectName: string[],
-  supplier: string,
+  supplier: string[],
   supplierRef: string,
   quantity: number,
   type: string,
@@ -78,6 +78,8 @@ export interface OrderBase extends Item {
   orderRef: string,
   project: string,
   supplierDomain: string,
+  mainImageCustom: string[],
+  suppliers: string,
 }
 
 export const orderBaseTable: Table<OrderBase> = { // edit
@@ -158,13 +160,15 @@ export const orderBaseTable: Table<OrderBase> = { // edit
     orderRef: 'fldeNFo8FmLiQLqUU',
     project: 'fldqWRqEFHnBP45Lc',
     supplierDomain: 'fld1r116X0VJO5tDL',
+    mainImageCustom: 'fldLzLfK8UuEzcMnC',
+    suppliers: 'flduHubOA34UkxHhW',
   },
   schema: {
     componentName: 'string',
     status: 'string',
     projectRef: 'string',
     projectName: 'string[]',
-    supplier: 'string',
+    supplier: 'string[]',
     supplierRef: 'string',
     quantity: 'number',
     type: 'string',
@@ -233,6 +237,8 @@ export const orderBaseTable: Table<OrderBase> = { // edit
     orderRef: 'string',
     project: 'string',
     supplierDomain: 'string',
+    mainImageCustom: 'string[]',
+    suppliers: 'string',
   },
 };
 
@@ -245,12 +251,12 @@ export interface Component extends Item {
   status: string,
   librarySource: string | null,
   qrCodePng: string[],
-  manufacturer: string | null,
+  manufacturer: string[] | null,
   manufacturerRef: string | null,
   number: number,
   series: string[] | null,
   release: string | null,
-  label: string,
+  passport: string,
   materialsTimber: string[] | null,
   gwpFromMaterialsTimber: number | null,
   sheetQuantity: number | null,
@@ -268,6 +274,7 @@ export interface Component extends Item {
   transportEmissionsFromFactory: number | null,
   project: string[] | null,
   qrCodeBase64: string,
+  label: string[],
 }
 
 export const componentsTable: Table<Component> = {
@@ -287,7 +294,7 @@ export const componentsTable: Table<Component> = {
     number: 'fldY0cvMpbMyzYZ6t',
     series: 'fldmCjIXB2M3Mdtre',
     release: 'fldqIu7a3eecu0udu',
-    label: 'fldJwnSObU0XQkXE9',
+    passport: 'fldJwnSObU0XQkXE9',
     materialsTimber: 'fld18WH7T8dxrmJp4',
     gwpFromMaterialsTimber: 'fld9Rz9WcT4YRghia',
     sheetQuantity: 'fldvzlfA4nlJdNBi2',
@@ -305,6 +312,7 @@ export const componentsTable: Table<Component> = {
     transportEmissionsFromFactory: 'fldG3uGXM3Xo5pFHM',
     project: 'fldXXZQtedyrX4UYj',
     qrCodeBase64: 'fld3hGReWcrRvbaW1',
+    label: 'fldLhOUUxzEjtYg1c',
   },
   schema: {
     componentUid: 'string | null',
@@ -314,12 +322,12 @@ export const componentsTable: Table<Component> = {
     status: 'string',
     librarySource: 'string | null',
     qrCodePng: 'string[]',
-    manufacturer: 'string | null',
+    manufacturer: 'string[] | null',
     manufacturerRef: 'string | null',
     number: 'number',
     series: 'string[] | null',
     release: 'string | null',
-    label: 'string',
+    passport: 'string',
     materialsTimber: 'string[] | null',
     gwpFromMaterialsTimber: 'number | null',
     sheetQuantity: 'number | null',
@@ -337,6 +345,7 @@ export const componentsTable: Table<Component> = {
     transportEmissionsFromFactory: 'number | null',
     project: 'string[] | null',
     qrCodeBase64: 'string',
+    label: 'string[]',
   },
 };
 
@@ -743,8 +752,8 @@ export interface Supplier extends Item {
   contactInformation: string,
   location: string,
   country: string,
-  machiningRate: number,
-  workshopLabourRate: number,
+  machiningRate: number | null, // edit
+  workshopLabourRate: number | null, // edit
   dateRegistered: number,
   website: string,
   complianceCertifications: string,
@@ -756,6 +765,7 @@ export interface Supplier extends Item {
   totalChassisCostFromProjects: number,
   totalPlatformFeeRollupFromProjects: number,
   supplierDomain: string,
+  orderBase2: string[],
 }
 
 export const suppliersTable: Table<Supplier> = {
@@ -782,6 +792,7 @@ export const suppliersTable: Table<Supplier> = {
     totalChassisCostFromProjects: 'fldtSo1c3vA33YggC',
     totalPlatformFeeRollupFromProjects: 'fldYFqOp2Si0TxFOW',
     supplierDomain: 'fldTcbOXkfCeoxvnN',
+    orderBase2: 'fld3uW2uy5JC7cktE',
   },
   schema: {
     supplierName: 'string',
@@ -790,8 +801,8 @@ export const suppliersTable: Table<Supplier> = {
     contactInformation: 'string',
     location: 'string',
     country: 'string',
-    machiningRate: 'number',
-    workshopLabourRate: 'number',
+    machiningRate: 'number | null', // edit
+    workshopLabourRate: 'number | null', // edit
     dateRegistered: 'number',
     website: 'string',
     complianceCertifications: 'string',
@@ -803,6 +814,7 @@ export const suppliersTable: Table<Supplier> = {
     totalChassisCostFromProjects: 'number',
     totalPlatformFeeRollupFromProjects: 'number',
     supplierDomain: 'string',
+    orderBase2: 'string[]',
   },
 };
 

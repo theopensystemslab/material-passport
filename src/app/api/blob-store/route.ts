@@ -1,10 +1,15 @@
 // utility function to clean up blob store as and when
 // vendored from https://vercel.com/docs/vercel-blob#deleting-all-blobs
+import 'server-only'
 
 import { del, list } from '@vercel/blob'
 import { type NextRequest, NextResponse } from 'next/server'
+
+export const GET = async (): Promise<NextResponse> => {
+  return new NextResponse('This route expects a DELETE request', { status: 405 })
+}
  
-export async function DELETE(req: NextRequest): Promise<NextResponse> {
+export const DELETE = async (req: NextRequest): Promise<NextResponse> => {
   if (req.headers.get('Authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return new NextResponse('Unauthorized', { status: 401 })
   }

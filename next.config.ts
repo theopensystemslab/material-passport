@@ -5,7 +5,9 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   experimental: {
     // any turbopack bundler config goes here
-    turbo: {}
+    turbo: {
+      // rules: {}
+    }
   },
   images: {
     remotePatterns: [

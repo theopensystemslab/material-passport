@@ -418,8 +418,8 @@ export default async function Page({
       </Accordion>
 
       {/* TODO: make available actions dependent on profile type (e.g. manufacturer, installer, owner etc.) */}
-      {/* TODO: make this button do something! (via server action) */}
-      {/* 2. make button do appropriate action (not yet including print label) */}
+      {/* TODO: make this button do appropriate action! (via server action, not including print label) */}
+      {/* i.e. wrap in a form (e.g. SingleButtonForm) */}
       <div className="flex flex-col space-y-2">
         {componentStatus === ComponentStatus.ReadyForProduction && 
           <Button variant="default">Print label</Button>}

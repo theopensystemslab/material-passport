@@ -90,7 +90,6 @@ export const getRecordFromScan = async <I extends Item>(
   return record
 }
 
-
 export const getRecordById = async <I extends Item>(
   table: Table<I>,
   recordId: string,

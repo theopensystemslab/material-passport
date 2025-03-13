@@ -43,5 +43,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# dev store
+# dev
 ignore/
+tmp/

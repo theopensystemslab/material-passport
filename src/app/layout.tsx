@@ -8,7 +8,6 @@ import './globals.css'
 
 
 const interSans = Inter({
-  variable: '--font-inter-sans',
   subsets: ['latin'],
 })
 
@@ -29,7 +28,7 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </head>
       <body
-        className={`${interSans.variable} antialiased bg-background text-foreground flex flex-col min-h-screen justify-start`}
+        className={`${interSans.className} antialiased bg-background text-foreground flex flex-col min-h-screen justify-start`}
       >
         <Header />
         <main className="flex flex-col flex-1 container max-w-6xl mx-auto mb-auto p-8 pt-4 gap-4">

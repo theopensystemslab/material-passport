@@ -8,6 +8,7 @@ const ERROR_CORRECTION_LEVEL = 'H'
 export const generateQrDataImage = async (textToEncode: string): Promise<string> => {
   return toDataURL(textToEncode, {
     errorCorrectionLevel: ERROR_CORRECTION_LEVEL,
+    margin: 1,
   })
 }
 
@@ -15,5 +16,6 @@ export const generateQrPngStream = async (stream: Writable, textToEncode: string
   return toFileStream(stream, textToEncode, { 
     errorCorrectionLevel: ERROR_CORRECTION_LEVEL,
     type: 'png',
+    margin: 1,
   })
 }
