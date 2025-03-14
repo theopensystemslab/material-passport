@@ -21,3 +21,28 @@ export type ValueOf<T> = T[keyof T]
 
 // type utility to consolidate nil types
 export type Nil = null | undefined
+
+// heavily redacted version of TextOptions vendored from pdfkit (because it's not exported)
+export interface TextOptions {
+  lineBreak?: boolean | undefined;
+  width?: number | undefined;
+  height?: number | undefined;
+  lineGap?: number | undefined;
+  wordSpacing?: number | undefined;
+  characterSpacing?: number | undefined;
+  underline?: boolean | undefined;
+  continued?: boolean | undefined;
+  align?: 'center' | 'justify' | 'left' | 'right' | undefined;
+  baseline?:
+      | number
+      | 'svg-middle'
+      | 'middle'
+      | 'svg-central'
+      | 'bottom'
+      | 'ideographic'
+      | 'alphabetic'
+      | 'mathematical'
+      | 'hanging'
+      | 'top'
+      | undefined;
+}

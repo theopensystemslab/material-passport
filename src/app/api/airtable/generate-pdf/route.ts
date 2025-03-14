@@ -15,18 +15,14 @@ export const runtime = 'nodejs'
 export const maxDuration = 120
 export const dynamic = 'force-dynamic'
 
-export const GET = async (): Promise<NextResponse> => {
-  return new NextResponse('This route expects a POST request', { status: 405 })
-}
-
-// backup util endpoint to generate pdf for a given component if sync-orders script failed to do so
-export const POST = async (req: NextRequest): Promise<NextResponse> => {
+// backup util endpoint to generate (and return) pdf for a given component if sync-orders script failed to do so
+export const GET = async (req: NextRequest): Promise<NextResponse> => {
   if (req.headers.get('Authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return new NextResponse('Unauthorized', { status: 401 })
   }
-  
-  const data = await req.formData()
-  const uid = data.get('uid')?.toString()
+
+  const searchParams = req.nextUrl.searchParams
+  const uid = searchParams.get('uid')
   if (!uid) {
     return new NextResponse('No component UID supplied in request (i.e. "uid=xxx")', { status: 400 })
   }
@@ -44,6 +40,8 @@ export const POST = async (req: NextRequest): Promise<NextResponse> => {
     if (isNotNil(component.label) && component.label.length > 0) {
       return new NextResponse(`Label pdf already exists in Airtable for component ${uid}`, { status: 500 })
     }
+    
+    console.debug(`Attempting to generate pdf for component ${uid}`)
     const duplexMemoryStream = new PassThrough()
     const result = await writePdfToStream(duplexMemoryStream, component)
     if (!result) {

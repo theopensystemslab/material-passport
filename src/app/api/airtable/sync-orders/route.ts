@@ -43,7 +43,7 @@ export const GET = async (req: NextRequest): Promise<NextResponse> => {
     // TODO: keep track of blobs and clean up store at end of run (https://vercel.com/docs/vercel-blob/using-blob-sdk#del)
     let ordersSynced = 0, ordersIgnored = 0, recordsCreated = 0
     for (const order of orders) {
-      if (order.synced) { 
+      if (order.isSynced) { 
         console.debug(`Order ${order.orderRef} (${order.id}) is already synced`)
         continue
       }
@@ -78,6 +78,7 @@ export const GET = async (req: NextRequest): Promise<NextResponse> => {
         console.debug(`QR code for component ${uid} uploaded to blob store: ${qrBlob.url}`)
         // we take a similar approach for generating the pdf label, passing the newly generated QR code as png data image
         const pdfDuplexMemoryStream = new PassThrough()
+        // FIXME: fails on production, due to smth about opaque Vercel filesystem - webpack config could work, but may need a hacky workaround
         await writePdfToStream(pdfDuplexMemoryStream, newComponentRecord, qrDataImage)
         const pdfBlob = await put(`${PDF_BLOB_FOLDER}/${uid}.pdf`, pdfDuplexMemoryStream, {
           access: 'public',
@@ -101,7 +102,7 @@ export const GET = async (req: NextRequest): Promise<NextResponse> => {
       }
 
       // finally, mark the order as synced to avoid duplicating records on next run
-      await db.update(orderBaseTable, { id: order.id, synced: true })
+      await db.update(orderBaseTable, { id: order.id, isSynced: true })
       console.log(`Successfully created ${order.quantity} new component records from order ${order.orderRef}`)
       ordersSynced++
     }

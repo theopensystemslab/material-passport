@@ -211,10 +211,10 @@ export default async function Page({
       </div>
       {/* TODO: display custom image if available (prefer this!) */}
       <Card className="relative w-full h-64 lg:h-96 flex justify-center items-center">
-        {order?.mainImage?.[0] ?
+        {order?.mainImageFromLibrarySource?.[0] ?
           <Image
             className="object-contain object-center rounded-md p-2"
-            src={order.mainImage[0]}
+            src={order.mainImageFromLibrarySource[0]}
             alt={`Orthogonal diagram of ${component.componentName}`}
             // images are svg so no need to optimise (alternatively we could set dangerouslyAllowSVG in next config)
             unoptimized
@@ -240,6 +240,7 @@ export default async function Page({
                     <TableCell className="font-medium">Block library</TableCell>
                     <TableCell className="text-right">{component.librarySource}</TableCell>
                   </TableRow>}
+                  {/* TODO: fetch suppliers and use here in place of component.manufacturer (which is now a record ID) */}
                   <TableRow>
                     <TableCell className="font-medium">Manufacturer</TableCell>
                     <TableCell className="text-right">{component.manufacturer}</TableCell>
@@ -300,7 +301,7 @@ export default async function Page({
                     </TableCell>
                     <TableCell>{materials.timber.materialName}</TableCell>
                     <TableCell>{materials.timber.producer}</TableCell>
-                    <TableCell className="text-right">{materials.timber.gwp}</TableCell>
+                    <TableCell className="text-right">{materials.timber.gwpTotal}</TableCell>
                   </TableRow>}
                   {isNotNil(materials.insulation) && <TableRow>
                     <TableCell>
@@ -318,7 +319,7 @@ export default async function Page({
                     </TableCell>
                     <TableCell>{materials.insulation.materialName}</TableCell>
                     <TableCell>{materials.insulation.producer}</TableCell>
-                    <TableCell className="text-right">{materials.insulation.gwp}</TableCell>
+                    <TableCell className="text-right">{materials.insulation.gwpTotal}</TableCell>
                   </TableRow>}
                   {isNotNil(materials.fixings) && <TableRow>
                     <TableCell>
@@ -336,7 +337,7 @@ export default async function Page({
                     </TableCell>
                     <TableCell>{materials.fixings.materialName}</TableCell>
                     <TableCell>{materials.fixings.producer}</TableCell>
-                    <TableCell className="text-right">{materials.fixings.gwp}</TableCell>
+                    <TableCell className="text-right">{materials.fixings.gwpTotal}</TableCell>
                   </TableRow>}
                 </TableBody>
               </Table>
