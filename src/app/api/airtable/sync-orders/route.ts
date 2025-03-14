@@ -4,10 +4,10 @@ import { PassThrough } from 'stream'
 import { put } from '@vercel/blob'
 import { type NextRequest, NextResponse } from 'next/server'
 
-import { getAirtableDb, getRawAirtableBase } from '@/helpers/airtable'
-import { writePdfToStream } from '@/helpers/pdf'
-import { generateQrDataImage, generateQrPngStream } from '@/helpers/qrcode'
+import { getAirtableDb, getRawAirtableBase } from '@/lib/airtable'
 import { ComponentStatus } from '@/lib/definitions'
+import { writePdfToStream } from '@/lib/pdf'
+import { generateQrDataImage, generateQrPngStream } from '@/lib/qrcode'
 import {
   type OrderBase,
   componentsTable,
@@ -30,6 +30,7 @@ const COMPONENT_STATUSES_TO_IGNORE = new Set([
   ComponentStatus.DesignInProgress,
 ])
 
+// FIXME: remove pdf generation logic until it can be made to work in production
 // route has to be GET to be triggerable by the cron job (POST/PUT would be more appropriate)
 export const GET = async (req: NextRequest): Promise<NextResponse> => {
   // guard against unauthorised triggering of this hook
@@ -78,7 +79,6 @@ export const GET = async (req: NextRequest): Promise<NextResponse> => {
         console.debug(`QR code for component ${uid} uploaded to blob store: ${qrBlob.url}`)
         // we take a similar approach for generating the pdf label, passing the newly generated QR code as png data image
         const pdfDuplexMemoryStream = new PassThrough()
-        // FIXME: fails on production, due to smth about opaque Vercel filesystem - webpack config could work, but may need a hacky workaround
         await writePdfToStream(pdfDuplexMemoryStream, newComponentRecord, qrDataImage)
         const pdfBlob = await put(`${PDF_BLOB_FOLDER}/${uid}.pdf`, pdfDuplexMemoryStream, {
           access: 'public',

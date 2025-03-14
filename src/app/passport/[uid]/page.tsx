@@ -40,7 +40,7 @@ import {
   getFieldNameMemoized,
   getRecordByField,
   getRecordFromScan,
-} from '@/helpers/airtable'
+} from '@/lib/airtable'
 import { ComponentStatus, type Nil } from '@/lib/definitions'
 import {
   type Component,

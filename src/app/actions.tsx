@@ -7,7 +7,7 @@ import { Readable } from 'stream'
 
 import { isNil } from 'es-toolkit'
 
-import { getCachedScan } from '@/helpers/airtable'
+import { getCachedScan } from '@/lib/airtable'
 import { Nil } from '@/lib/definitions'
 import {
   type Component,

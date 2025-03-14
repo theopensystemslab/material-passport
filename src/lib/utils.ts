@@ -24,4 +24,3 @@ export const getComponentStatusEnum = (status: string): ComponentStatus => {
   }
   return ComponentStatusLookup[status]
 }
-

@@ -5,8 +5,8 @@ import { put } from '@vercel/blob'
 import { isNotNil } from 'es-toolkit'
 import { type NextRequest, NextResponse } from 'next/server'
 
-import { getRawAirtableBase, getRecordByField } from '@/helpers/airtable'
-import { writePdfToStream } from '@/helpers/pdf'
+import { getRawAirtableBase, getRecordByField } from '@/lib/airtable'
+import { writePdfToStream } from '@/lib/pdf'
 import { type Component, componentsTable } from '@/lib/schema'
 
 const PDF_BLOB_FOLDER = 'pdf'

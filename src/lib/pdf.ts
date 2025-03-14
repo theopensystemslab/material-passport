@@ -2,12 +2,13 @@ import fs from 'fs'
 import path from 'path'
 import type { Writable } from 'stream'
 
+import 'server-only'
 import { toMerged } from 'es-toolkit'
 import PDFDocument from 'pdfkit'
 import svgToPdf from 'svg-to-pdfkit'
 
-import { getRecordById } from '@/helpers/airtable'
-// have to vendor our own copy of TextOptions interface because pdfkit doesn't export it
+import { getRecordById } from '@/lib/airtable'
+// we vendor our own copy of TextOptions interface because pdfkit doesn't export it
 import type { TextOptions } from '@/lib/definitions'
 import {
   type Component,
@@ -16,22 +17,6 @@ import {
   orderBaseTable,
   suppliersTable,
 } from '@/lib/schema'
-
-const PDFKIT_ASSETS_DIR = path.join(process.cwd(), 'node_modules', 'pdfkit', 'js', 'data')
-const PDFKIT_MINIMAL_ASSETS = [
-  'Helvetica.afm',
-  'sRGB_IEC61966_2_1.icc',
-]
-
-const NEXT_PROD_ASSET_DIR = path.join(process.cwd(), '.next', 'server', 'chunks', 'data')
-const NEXT_START_ASSET_DIRS = [
-  path.join(process.cwd(), '.next', 'server', 'app', 'api', 'airtable', 'generate-pdf', 'data'),
-  NEXT_PROD_ASSET_DIR
-]
-const NEXT_DEV_ASSET_DIRS = [
-  path.join(process.cwd(), '.next', 'server', 'vendor-chunks', 'data'),
-  NEXT_PROD_ASSET_DIR,
-]
 
 // we determine here some constants for overall layout of the label
 const CENTRAL_COLUMN_WIDTH_PS = 160 // + (x margin * 2) = 300 PS (i.e. ~ A6 width)
@@ -50,6 +35,7 @@ const DEFAULT_TEXT_OPTIONS: TextOptions = {
   lineBreak: false,
 }
 
+// FIXME: this method only works on local (dev/build) with webpack (i.e. `next dev`) - not on prod!
 export const writePdfToStream = async (
   stream: Writable,
   component: Component,
@@ -76,8 +62,7 @@ export const writePdfToStream = async (
       throw new Error(`Failed to fetch supplier(s) for order ${order.orderRef}`)
     }
     
-    // using pdfkit over pdfmake because bundler problems were more difficult to overcome for the latter (and silent!)
-    ensureAssets()
+    // using pdfkit over pdfmake because bundler problems looked more difficult to overcome for the latter (and silent!)
     console.log(`Generating pdf for component ${uid}`)
     const doc = new PDFDocument({
       // ISO A6 = 297.64 x 419.53 PostScript/DTP points (~105×148mm) - see https://pdfkit.org/docs/paper_sizes.html
@@ -184,51 +169,6 @@ export const writePdfToStream = async (
     console.error(`Failed to generate pdf for component ${component.componentUid}`, error)
     return false
   }
-}
-
-// inspired by: https://www.reddit.com/r/nextjs/comments/1eqasu1/cant_use_pdfkit_library_with_nextjs_app_route/
-// TODO: implement a less hacky solution based on webpack config, e.g. https://github.com/foliojs/pdfkit/tree/master/examples/webpack
-const ensureAssets = (
-  assets: string[] = PDFKIT_MINIMAL_ASSETS,
-): void => {
-  const sourceDir = PDFKIT_ASSETS_DIR
-  // determine where to copy assets based on env (NB. can only run this on dev server with webpack i.e. no `--turbo` flag!)
-  // we take a precautionary approach here and copy assets to multiple locations for the best chance of success
-  const destDirs = (process.env.NODE_ENV === 'production') ? NEXT_START_ASSET_DIRS : NEXT_DEV_ASSET_DIRS
-  console.debug('Ensuring assets for pdfkit (e.g. AFM/ICC files) are available to Next server')
-  console.debug(`Source of assets: ${sourceDir}`)
-  console.debug(`Running in Node environment: ${process.env.NODE_ENV}`)
-  
-  // ensure destination directory exists, and create it if not
-  for (const destDir of destDirs) {
-    if (!fs.existsSync(destDir)) {
-      fs.mkdirSync(destDir, { recursive: true })
-    }
-  }
-
-  // if no assets specified, we copy all pdfkit assets across
-  const files = (assets.length === 0) ? fs.readdirSync(sourceDir) : assets
-  for (const destDir of destDirs) {
-    const filesCopied = copyFilesSync(sourceDir, destDir, files)
-    if (filesCopied > 0) {
-      console.debug(`${files.length} pdfkit assets copied to ${destDir}`)
-    } else {
-      console.debug(`All pdfkit assets specified already available in ${destDir}`)
-    }
-  }
-}
-
-const copyFilesSync = (sourceDir: string, destDir: string, files: string[]): number => {
-  let filedCopied = 0
-  for (const filename of files) {
-    const sourcePath = path.join(sourceDir, filename)
-    const destPath = path.join(destDir, filename)
-    if (!fs.existsSync(destPath)) {
-      fs.copyFileSync(sourcePath, destPath)
-      filedCopied++
-    }
-  }
-  return filedCopied
 }
 
 const getXPositionForCenteredItem = (
