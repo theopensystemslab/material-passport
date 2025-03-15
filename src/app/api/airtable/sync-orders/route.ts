@@ -30,7 +30,6 @@ const COMPONENT_STATUSES_TO_IGNORE = new Set([
   ComponentStatus.DesignInProgress,
 ])
 
-// FIXME: remove pdf generation logic until it can be made to work in production
 // route has to be GET to be triggerable by the cron job (POST/PUT would be more appropriate)
 export const GET = async (req: NextRequest): Promise<NextResponse> => {
   // guard against unauthorised triggering of this hook

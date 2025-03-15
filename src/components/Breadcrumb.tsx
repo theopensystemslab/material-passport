@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator'
 
 
 // TODO: develop into a full breadcrumb/navigation solution?
+// TODO: replace home icon with 'Material Passport' (pending a logo proper)
 export const Breadcrumb = (props: DivProps): JSX.Element => {
   const pathname = usePathname()
   const parts = pathname.split('/')

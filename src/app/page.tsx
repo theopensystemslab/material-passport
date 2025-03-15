@@ -8,7 +8,7 @@ export default async function Page({
   return (
     <>
       <h1>
-        Component Passports
+        Material Passport
       </h1>
       <h2>
         An app written in Next.js

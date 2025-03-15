@@ -35,7 +35,6 @@ const DEFAULT_TEXT_OPTIONS: TextOptions = {
   lineBreak: false,
 }
 
-// FIXME: this method only works on local (dev/build) with webpack (i.e. `next dev`) - not on prod!
 export const writePdfToStream = async (
   stream: Writable,
   component: Component,

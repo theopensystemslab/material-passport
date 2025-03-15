@@ -12,7 +12,7 @@ const interSans = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'Component Passports',
+  title: 'Material Passport',
   description: 'Track your WikiHouse blocks all the way home',
 }
 

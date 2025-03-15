@@ -8,7 +8,7 @@ const PDFKIT_ASSETS_DIR = path.join(process.cwd(), 'node_modules', 'pdfkit', 'js
 const NEXT_START_ASSET_DIR = path.join(process.cwd(), '.next', 'server', 'chunks', 'data')
 const NEXT_DEV_ASSET_DIR = path.join(process.cwd(), '.next', 'server', 'vendor-chunks', 'data')
 
-// util which ensured pdfkit assets were available to Next server at runtime (supplanted by a webpack plugin solution - see next.config.ts)
+// util which ensured pdfkit assets were available to Next server at runtime (supplanted in the final case by serverExternalPackages Next config)
 // inspired by: https://www.reddit.com/r/nextjs/comments/1eqasu1/cant_use_pdfkit_library_with_nextjs_app_route/
 export const ensureAssets = (
   assets: string[] = PDFKIT_MINIMAL_ASSETS,

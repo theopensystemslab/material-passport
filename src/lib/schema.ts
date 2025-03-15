@@ -514,7 +514,7 @@ export interface Supplier extends Item {
   country: string,
   machiningRate: number | null, // edit
   workshopLabourRate: number | null, // edit
-  dateRegistered: number,
+  dateRegistered: number | null, // edit
   website: string,
   complianceCertifications: string,
   logo: string[],
@@ -559,7 +559,7 @@ export const suppliersTable: Table<Supplier> = {
     country: 'string',
     machiningRate: 'number | null', // edit
     workshopLabourRate: 'number | null', // edit
-    dateRegistered: 'number',
+    dateRegistered: 'number | null', // edit
     website: 'string',
     complianceCertifications: 'string',
     logo: 'string[]',

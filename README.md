@@ -19,7 +19,6 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 ...
 
 
-## Important notes
+## Notes
 
-- If trying to run the pdf generation logic on local (e.g. hitting `generate-pdf`), make sure to use webpack instead of turbopack (`pnpm devv`), else you will run into an issue with the bundler being unable to locate the pdfkit assets, which we copy across via a webpack plugin. The alternative is just to build the full application (`pnpm build`, `pnpm start`), which also works. 
-- 
+- I had an issue which took several days to fix, to do with `pdfkit` trying to access files it needs to initiate (e.g. the `Helvetica.afm` font), but which Next was not bundling. This meant attempts to generate pdfs would fail. I first fixed this on local with the code in `src/lib/hacks.ts`, then with a more elegant solution involving custom Webpack config, but neither of these solutions translated to the production/Vercel build. _Finally_, I stumbled on the `serverExternalPackages` config option, which solves it everywhere in one line!

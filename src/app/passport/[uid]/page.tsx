@@ -43,14 +43,18 @@ import {
 } from '@/lib/airtable'
 import { ComponentStatus, type Nil } from '@/lib/definitions'
 import {
+  type AllBlock,
   type Component,
   type Material,
   type OrderBase,
   type Project,
+  type Supplier,
+  allBlocksTable,
   componentsTable,
   materialsTable,
   orderBaseTable,
-  projectsTable
+  projectsTable,
+  suppliersTable,
 } from '@/lib/schema'
 import { getComponentStatusEnum } from '@/lib/utils'
 
@@ -73,6 +77,8 @@ const getComponents = getCachedScan<Component>(componentsTable, 180)
 const getProjects = getCachedScan<Project>(projectsTable)
 const getOrders = getCachedScan<OrderBase>(orderBaseTable)
 const getMaterials = getCachedScan<Material>(materialsTable)
+const getSuppliers = getCachedScan<Supplier>(suppliersTable)
+const getBlocks = getCachedScan<AllBlock>(allBlocksTable)
 
 // we also get any memoized field name lookups we might need
 const getComponentFieldName = getFieldNameMemoized(componentsTable)
@@ -84,6 +90,8 @@ export async function generateStaticParams(): Promise<{ uid: string }[]> {
   getProjects()
   getOrders()
   getMaterials()
+  getSuppliers()
+  getBlocks()
   // wait for component scan to complete
   const components = await getComponentsPromise
   // ignore any records without UID (none should exist anyway)
@@ -135,7 +143,7 @@ export default async function Page({
 
   const componentStatus = getComponentStatusEnum(component.status)
 
-  // we also fetch related project, order and material records (but unlike for the component, if any fail, we don't error out)
+  // we also fetch related project, order, suppliers, library source and material records (but if any fail, we don't error out)
   // we always use cached scans here (regardless of env), since these tables change less frequently
   let project
   if (component.project?.[0]) {
@@ -152,6 +160,26 @@ export default async function Page({
     order = await getRecordFromScan<OrderBase>(getOrders, component.orderBase[0])
   } else {
     console.warn(`Component ${uid} has no associated order`)
+  }
+
+  // some components may be manufactured by multiple agents (e.g. fabricated by one shop, assembled elsewhere)
+  const suppliers = []
+  if (component.manufacturer?.[0]) {
+    for (const supplierId of component.manufacturer) {
+      const supplier = await getRecordFromScan<Supplier>(getSuppliers, supplierId)
+      if (supplier) {
+        suppliers.push(supplier)
+      }
+    }
+  } else {
+    console.warn(`Component ${uid} has no associated manufacturer(s)`)
+  }
+  
+  let block
+  if (component.librarySource?.[0]) {
+    block = await getRecordFromScan<AllBlock>(getBlocks, component.librarySource[0])
+  } else {
+    console.warn(`Component ${uid} has no associated block library source`)
   }
 
   interface Materials {
@@ -185,6 +213,16 @@ export default async function Page({
   console.log('component', component)
   console.log('project', project)
   console.log('order', order)
+  console.log('block', block)
+  for (const supplier of suppliers) {
+    console.log(`supplier ${supplier.supplierName}`, supplier)
+  }
+
+  // fix some variables here for expediency later
+  const modelFile = order?._3dmodelcustom?.[0] || order?.githubModelDetailedFromLibrarySource?.[0]
+  const assemblyFile = order?.assemblyManualCustom?.[0] || order?.githubAssemblyGuideFromLibrarySource?.[0]
+  const cuttingFile = order?.cuttingFilesCustom?.[0] || order?.githubCuttingFileFromLibrarySource?.[0]
+
 
   return (
     // TODO: move Suspense/spinner up to root layout level?
@@ -211,10 +249,10 @@ export default async function Page({
       </div>
       {/* TODO: display custom image if available (prefer this!) */}
       <Card className="relative w-full h-64 lg:h-96 flex justify-center items-center">
-        {order?.mainImageFromLibrarySource?.[0] ?
+        {order?.mainImageCustom?.[0] || order?.mainImageFromLibrarySource?.[0] ?
           <Image
             className="object-contain object-center rounded-md p-2"
-            src={order.mainImageFromLibrarySource[0]}
+            src={order?.mainImageCustom?.[0] || order.mainImageFromLibrarySource[0]}
             alt={`Orthogonal diagram of ${component.componentName}`}
             // images are svg so no need to optimise (alternatively we could set dangerouslyAllowSVG in next config)
             unoptimized
@@ -236,26 +274,34 @@ export default async function Page({
                 <TableBody>
                   {/* TODO: we don't bother with a header row (data is self-explanatory) - check if this is bad a11y? */}
                   {/* TODO: whittle this section down with a map */}
-                  {isNotNil(component.librarySource) && <TableRow>
+                  {isNotNil(block?.name) && <TableRow>
                     <TableCell className="font-medium">Block library</TableCell>
-                    <TableCell className="text-right">{component.librarySource}</TableCell>
+                    <TableCell className="text-right text-nowrap">{block.name}</TableCell>
                   </TableRow>}
-                  {/* TODO: fetch suppliers and use here in place of component.manufacturer (which is now a record ID) */}
-                  <TableRow>
-                    <TableCell className="font-medium">Manufacturer</TableCell>
-                    <TableCell className="text-right">{component.manufacturer}</TableCell>
-                  </TableRow>
+                  {isNotNil(suppliers?.[0]) && <TableRow>
+                    <TableCell className="font-medium">Manufacturer(s)</TableCell>
+                    <TableCell className="text-right whitespace-pre">
+                      {suppliers.map(supplier => supplier.supplierName).join('\n')}
+                    </TableCell>
+                  </TableRow>}
                   {isNotNil(component.totalMass) && <TableRow>
                     <TableCell className="font-medium">Mass <small>(kg)</small></TableCell>
                     <TableCell className="text-right">{round(component.totalMass, MAX_DECIMAL_PLACE_PRECISION)}</TableCell>
                   </TableRow>}
                   {isNotNil(component.totalGwp) && <TableRow>
-                    {/* TODO: do we need to give time horizon for this GWP measurement, e.g. `GWP-20` */}
                     <TableCell className="font-medium">Global warming potential</TableCell>
                     <TableCell className="text-right">{round(component.totalGwp, MAX_DECIMAL_PLACE_PRECISION)}</TableCell>
                   </TableRow>}
+                  {isNotNil(order?.gwpFossil) && <TableRow>
+                    <TableCell className="font-medium">GWP (fossil)</TableCell>
+                    <TableCell className="text-right">{round(order.gwpFossil, MAX_DECIMAL_PLACE_PRECISION)}</TableCell>
+                  </TableRow>}
+                  {isNotNil(order?.gwpBiogenic) && <TableRow>
+                    <TableCell className="font-medium">GWP (biogenic)</TableCell>
+                    <TableCell className="text-right">{round(order.gwpBiogenic, MAX_DECIMAL_PLACE_PRECISION)}</TableCell>
+                  </TableRow>}
                   {isNotNil(component.totalDistanceTravelled) && <TableRow>
-                    <TableCell className="font-medium">Distance travelled <small>(kg)</small></TableCell>
+                    <TableCell className="font-medium">Distance travelled <small>(km)</small></TableCell>
                     <TableCell className="text-right">{round(component.totalDistanceTravelled, MAX_DECIMAL_PLACE_PRECISION)}</TableCell>
                   </TableRow>}
                   {isNotNil(component.totalDistanceTravelled) && <TableRow>
@@ -344,37 +390,37 @@ export default async function Page({
             </AccordionContent>
           </section>
         </AccordionItem>
-        <AccordionItem asChild value="design">
+        {(modelFile || assemblyFile || cuttingFile) && <AccordionItem asChild value="design">
           <section>
             <AccordionTrigger>
               <h3>Design</h3>
             </AccordionTrigger>
             <AccordionContent>
               <Table>
-                {/* TODO: add switch logic to provide custom versions in case they exist (prefer custom over github!) */}
                 <TableBody>
-                  {order?.githubModelDetailedFromLibrarySource && <TableRow>
+                  {/* FIXME: airtable hosted content doesn't come with nice filenames! */}
+                  {modelFile && <TableRow>
                     <TableCell className="font-medium">3D model</TableCell>
                     <TableCell className="text-right">
-                      <a href={order?.githubModelDetailedFromLibrarySource}>
-                        {order?.githubModelDetailedFromLibrarySource.split('/').pop()}
+                      <a href={modelFile}>
+                        {modelFile.split('/').pop()}
                       </a>
                     </TableCell>
                   </TableRow>}
-                  {order?.githubCuttingFileFromLibrarySource &&
+                  {assemblyFile &&
                   <TableRow>
                     <TableCell className="font-medium">Production files</TableCell>
                     <TableCell className="text-right">
-                      <a href={order?.githubCuttingFileFromLibrarySource}>
-                        {order?.githubCuttingFileFromLibrarySource.split('/').pop()}
+                      <a href={assemblyFile}>
+                        {assemblyFile.split('/').pop()}
                       </a>
                     </TableCell>
                   </TableRow>}
-                  {order?.githubAssemblyGuideFromLibrarySource && <TableRow>
+                  {cuttingFile && <TableRow>
                     <TableCell className="font-medium">Assembly manual</TableCell>
                     <TableCell className="text-right">
-                      <a href={order?.githubAssemblyGuideFromLibrarySource}>
-                        {order?.githubAssemblyGuideFromLibrarySource.split('/').pop()}
+                      <a href={cuttingFile}>
+                        {cuttingFile.split('/').pop()}
                       </a>
                     </TableCell>
                   </TableRow>}
@@ -382,7 +428,7 @@ export default async function Page({
               </Table>
             </AccordionContent>
           </section>
-        </AccordionItem>
+        </AccordionItem>}
 
         {/* SAVE POINT - IGNORE EVERYTHING ABOVE THIS LINE */}
 
