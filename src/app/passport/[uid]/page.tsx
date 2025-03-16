@@ -10,7 +10,7 @@ import Head from 'next/head'
 import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Suspense } from 'react'
+import { type JSX, Suspense } from 'react'
 
 import { StatusTransitionButtons } from '@/app/passport/[uid]/StatusTransitionButtons'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
@@ -88,13 +88,11 @@ export async function generateStaticParams(): Promise<{ uid: string }[]> {
     .map((component) => ({ uid: component.componentUid as string }))
 }
 
-export default async function Page({
-  params,
-}: {
+export default async function Page({params}: {
   params: Promise<{
     uid: string;
   }>;
-}) {
+}): Promise<JSX.Element> {
   const { uid } = await params
 
   let component
@@ -229,9 +227,9 @@ export default async function Page({
         </Button>
       )}
       <div className="flex flex-col space-y-2">
-        <h2>{component.componentName}</h2>
+        <h1>{component.componentName}</h1>
         <div className="flex justify-between">
-          <p>#{component.componentUid}</p>
+          <small>#{component.componentUid}</small>
           <Badge className={kebabCase(component.status)}>{component.status}</Badge>
         </div>
       </div>

@@ -31,7 +31,7 @@ export default function RootLayout({
         className={`${interSans.className} antialiased bg-background text-foreground flex flex-col min-h-screen justify-start`}
       >
         <Header />
-        <main className="flex flex-col flex-1 container max-w-6xl mx-auto mb-auto p-8 pt-4 gap-4">
+        <main className="flex flex-col flex-1 container max-w-6xl mx-auto mb-auto p-8 pt-4 space-y-4">
           {children}
         </main>
         <Footer />
