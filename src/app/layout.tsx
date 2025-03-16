@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { type ReactNode } from 'react'
 
-import { Footer } from '@/components/Footer'
-import { Header } from '@/components/Header'
+import { Footer } from '@/app/Footer'
+import { Header } from '@/app/Header'
 import './globals.css'
 
 

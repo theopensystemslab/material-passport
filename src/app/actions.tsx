@@ -6,9 +6,10 @@ import path from 'path'
 import { Readable } from 'stream'
 
 import { isNil } from 'es-toolkit'
+import { revalidatePath } from 'next/cache'
 
-import { getCachedScan } from '@/lib/airtable'
-import { Nil } from '@/lib/definitions'
+import { getAirtableDb, getCachedScan } from '@/lib/airtable'
+import { ComponentStatus, Nil } from '@/lib/definitions'
 import {
   type Component,
   type Project,
@@ -19,13 +20,21 @@ import {
 const getComponents = getCachedScan<Component>(componentsTable, 180)
 const getProjects = getCachedScan<Project>(projectsTable)
 
-export const downloadLabels = async (projectName: string | Nil): Promise<void | null> => {
+interface DownloadLabelsOptions {
+  projectName?: string | Nil;
+  blockName?: string | Nil;
+}
+
+// download all labels for a given project or block type
+// TODO: implement block type option
+// TODO: have this func return a zipped file of all labels
+export const downloadLabels = async (options: DownloadLabelsOptions): Promise<void | null> => {
+  const { projectName } = options
   if (isNil(projectName)) {
     console.error('No project name provided')
     return null
   }
   console.log(`Downloading all labels for project: ${projectName}`)
-  // kick off cached scans
   const components = await getComponents()
   const projects = await getProjects()
   for (const component of components) {
@@ -45,3 +54,18 @@ export const downloadLabels = async (projectName: string | Nil): Promise<void | 
       }
     }
   }}
+
+export const changeComponentStatus = async (
+  uid: string,
+  recordId: string,
+  newStatus: ComponentStatus,
+): Promise<void> => {
+  console.debug(`Changing status of component ${uid} to ${newStatus}`)
+  const db = getAirtableDb()
+  db.update(componentsTable, {
+    id: recordId,
+    status: newStatus,
+  })
+  // now we force a revalidation (cache deletion) of the relevant passport
+  revalidatePath(`/passport/${uid}`)
+}

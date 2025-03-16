@@ -10,6 +10,17 @@ export enum ComponentStatus {
   InUse = 'In use',
 }
 
+// we also encode the possible transitions between statuses here
+export const STATUS_TRANSITIONS: Record<ComponentStatus, ComponentStatus[]> = {
+  [ComponentStatus.DesignInProgress]: [],
+  [ComponentStatus.ReadyForProduction]: [ComponentStatus.Manufactured],
+  [ComponentStatus.Manufactured]: [ComponentStatus.InTransit, ComponentStatus.ReceivedOnSite],
+  [ComponentStatus.InTransit]: [ComponentStatus.ReceivedOnSite],
+  [ComponentStatus.ReceivedOnSite]: [ComponentStatus.Installed],
+  [ComponentStatus.Installed]: [ComponentStatus.InUse],
+  [ComponentStatus.InUse]: [],
+}
+
 // gist some types here to build on the schema.ts file, for use in the airtable helper
 // we know in practice that keys on an Item are strings - but we have to convince tsc!
 export type TableMappingKeys<I> = Extract<keyof Omit<I, 'id'>, string>

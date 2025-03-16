@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import { type JSX } from 'react'
 import { type DivProps } from 'react-html-props'
 
-import { HomeIcon } from '@/components/HomeIcon'
+import { HomeIcon } from '@/app/HomeIcon'
 import { Separator } from '@/components/ui/separator'
 
 

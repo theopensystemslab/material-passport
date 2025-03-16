@@ -1,7 +1,9 @@
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
-import { ComponentStatus } from '@/lib/definitions'
+import { ComponentStatus, Nil } from '@/lib/definitions'
+
+const FILE_EXTENSION_REGEX = /\.[^/.]+$/
 
 export const cn = (...inputs: ClassValue[]): string => {
   return twMerge(clsx(inputs))
@@ -24,3 +26,25 @@ export const getComponentStatusEnum = (status: string): ComponentStatus => {
   }
   return ComponentStatusLookup[status]
 }
+
+// handy util for truncating long filenames without losing the extension/file type
+export const truncate = (
+  str: string | Nil,
+  maxLength: number = 20,
+): string => {
+  if (!str) return ''
+  if (str.length <= maxLength) return str
+
+  const extMatch = str.match(FILE_EXTENSION_REGEX)
+  if (!extMatch) {
+    return str.slice(0, maxLength - 1) + '…'
+  }
+
+  const ellipsisExt = '…' + extMatch[0].slice(1)
+  // handle weird/unlikely edge case where filename is shorter than extension
+  const available = maxLength - ellipsisExt.length
+  if (available <= 0) return ellipsisExt
+  
+  return str.slice(0, available) + ellipsisExt
+}
+

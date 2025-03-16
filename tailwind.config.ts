@@ -1,5 +1,13 @@
+import { kebabCase } from 'es-toolkit'
 import type { Config } from 'tailwindcss'
 import tailwindAnimate from 'tailwindcss-animate'
+
+import { ComponentStatus } from './src/lib/definitions'
+
+const getComponentStatusSafelist = (): string[] => {
+  const statuses = Object.values(ComponentStatus)
+  return statuses.map((status) => kebabCase(status))
+}
 
 export default {
   darkMode: ['class'],
@@ -81,4 +89,6 @@ export default {
     }
   },
   plugins: [tailwindAnimate],
+  // tailwind cannot 'see' dynamic class names, so we have to explicitly keep them in
+  safelist: getComponentStatusSafelist(),
 } satisfies Config

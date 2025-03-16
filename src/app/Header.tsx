@@ -1,8 +1,8 @@
 import { type JSX } from 'react'
 import { type HeaderProps } from 'react-html-props'
 
-import { Breadcrumb } from '@/components/Breadcrumb'
-import { ProfileButton } from '@/components/ProfileButton'
+import { Breadcrumb } from '@/app/Breadcrumb'
+import { ProfileButton } from '@/app/ProfileButton'
 import { cn } from '@/lib/utils'
 
 interface HeaderPropsCN extends HeaderProps {

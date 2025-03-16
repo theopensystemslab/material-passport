@@ -19,6 +19,11 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 ...
 
 
+## Structure
+
+- Components which are used in one place only are co-located with the relevant `layout` or `page`. Components which are re-used multiple times / are more generic are in `src/components`. Shadcn library components (which are mostly untouched since installation) are in `src/components/ui`.
+
+
 ## Notes
 
 - I had an issue which took several days to fix, to do with `pdfkit` trying to access files it needs to initiate (e.g. the `Helvetica.afm` font), but which Next was not bundling. This meant attempts to generate pdfs would fail. I first fixed this on local with the code in `src/lib/hacks.ts`, then with a more elegant solution involving custom Webpack config, but neither of these solutions translated to the production/Vercel build. _Finally_, I stumbled on the `serverExternalPackages` config option, which solves it everywhere in one line!

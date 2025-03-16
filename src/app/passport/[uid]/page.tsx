@@ -1,13 +1,9 @@
-import {
-  isNotNil,
-  lowerCase,
-  round
-} from 'es-toolkit'
+import { isNotNil, round } from 'es-toolkit'
 import { kebabCase } from 'es-toolkit/string'
 import {
   Check,
   Image as ImageIcon,
-  MoveLeft
+  MoveLeft,
 } from 'lucide-react'
 import { PHASE_PRODUCTION_BUILD } from 'next/constants'
 import Head from 'next/head'
@@ -16,6 +12,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 
+import { StatusTransitionButtons } from '@/app/passport/[uid]/StatusTransitionButtons'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import {
   Accordion,
@@ -56,18 +53,9 @@ import {
   projectsTable,
   suppliersTable,
 } from '@/lib/schema'
-import { getComponentStatusEnum } from '@/lib/utils'
+import { getComponentStatusEnum, truncate } from '@/lib/utils'
 
 const MAX_DECIMAL_PLACE_PRECISION: number = 1
-const STATUS_TRANSITIONS: Record<ComponentStatus, ComponentStatus[]> = {
-  [ComponentStatus.DesignInProgress]: [],
-  [ComponentStatus.ReadyForProduction]: [ComponentStatus.Manufactured],
-  [ComponentStatus.Manufactured]: [ComponentStatus.InTransit, ComponentStatus.ReceivedOnSite],
-  [ComponentStatus.InTransit]: [ComponentStatus.ReceivedOnSite],
-  [ComponentStatus.ReceivedOnSite]: [ComponentStatus.Installed],
-  [ComponentStatus.Installed]: [ComponentStatus.InUse],
-  [ComponentStatus.InUse]: [],
-}
 
 // we use ISR to generate static passports at build and fetch fresh data at request time as needed
 export const revalidate = 180
@@ -218,11 +206,12 @@ export default async function Page({
     console.log(`supplier ${supplier.supplierName}`, supplier)
   }
 
-  // fix some variables here for expediency later
-  const modelFile = order?._3dmodelcustom?.[0] || order?.githubModelDetailedFromLibrarySource?.[0]
-  const assemblyFile = order?.assemblyManualCustom?.[0] || order?.githubAssemblyGuideFromLibrarySource?.[0]
-  const cuttingFile = order?.cuttingFilesCustom?.[0] || order?.githubCuttingFileFromLibrarySource?.[0]
-
+  // fix some variables here for expediency
+  const mainImage = order?.mainImageCustom?.[0] || order?.mainImageFromLibrarySource?.[0]
+  // custom assembly manual is an attachment, the rest are URLs
+  const modelFile = order?._3dmodelcustom || order?.githubModelDetailedFromLibrarySource
+  const assemblyFile = order?.assemblyManualCustom?.[0] || order?.githubAssemblyGuideFromLibrarySource
+  const cuttingFile = order?.cuttingFilesCustom || order?.githubCuttingFileFromLibrarySource
 
   return (
     // TODO: move Suspense/spinner up to root layout level?
@@ -243,22 +232,19 @@ export default async function Page({
         <h2>{component.componentName}</h2>
         <div className="flex justify-between">
           <p>#{component.componentUid}</p>
-          {/* FIXME: get badge colour assignment working */}
           <Badge className={kebabCase(component.status)}>{component.status}</Badge>
         </div>
       </div>
-      {/* TODO: display custom image if available (prefer this!) */}
       <Card className="relative w-full h-64 lg:h-96 flex justify-center items-center">
-        {order?.mainImageCustom?.[0] || order?.mainImageFromLibrarySource?.[0] ?
-          <Image
-            className="object-contain object-center rounded-md p-2"
-            src={order?.mainImageCustom?.[0] || order.mainImageFromLibrarySource[0]}
-            alt={`Orthogonal diagram of ${component.componentName}`}
-            // images are svg so no need to optimise (alternatively we could set dangerouslyAllowSVG in next config)
-            unoptimized
-            priority
-            fill
-          /> : <ImageIcon className="w-full h-16 lg:h-24 opacity-70" />
+        {mainImage ? <Image
+          className="object-contain object-center rounded-md p-2"
+          src={mainImage}
+          alt={`Orthogonal diagram of ${component.componentName}`}
+          // images are svg so no need to optimise (alternatively we could set dangerouslyAllowSVG in next config)
+          unoptimized
+          priority
+          fill
+        /> : <ImageIcon className="w-full h-16 lg:h-24 opacity-70" />
         }
       </Card>
       {/* we use the powerful `asChild` flag (from shadcn/Radix) to enforce semantic html */}
@@ -273,7 +259,6 @@ export default async function Page({
               <Table>
                 <TableBody>
                   {/* TODO: we don't bother with a header row (data is self-explanatory) - check if this is bad a11y? */}
-                  {/* TODO: whittle this section down with a map */}
                   {isNotNil(block?.name) && <TableRow>
                     <TableCell className="font-medium">Block library</TableCell>
                     <TableCell className="text-right text-nowrap">{block.name}</TableCell>
@@ -288,6 +273,7 @@ export default async function Page({
                     <TableCell className="font-medium">Mass <small>(kg)</small></TableCell>
                     <TableCell className="text-right">{round(component.totalMass, MAX_DECIMAL_PLACE_PRECISION)}</TableCell>
                   </TableRow>}
+                  {/* TODO: add a link / tooltip to explain GWP? (e.g. https://en.wikipedia.org/wiki/Global_warming_potential) */}
                   {isNotNil(component.totalGwp) && <TableRow>
                     <TableCell className="font-medium">Global warming potential</TableCell>
                     <TableCell className="text-right">{round(component.totalGwp, MAX_DECIMAL_PLACE_PRECISION)}</TableCell>
@@ -329,7 +315,7 @@ export default async function Page({
                     <TableHead className="text-right">CO<sub>2</sub></TableHead>
                   </TableRow>
                 </TableHeader>
-                {/* TODO: make the below thumbnail images expandable for inspection, and extract as separate component */}
+                {/* TODO: make the below thumbnail images expandable for inspection, and extract row as separate component */}
                 <TableBody>
                   {isNotNil(materials.timber) && <TableRow>
                     <TableCell>
@@ -346,8 +332,8 @@ export default async function Page({
                       </div>
                     </TableCell>
                     <TableCell>{materials.timber.materialName}</TableCell>
-                    <TableCell>{materials.timber.producer}</TableCell>
-                    <TableCell className="text-right">{materials.timber.gwpTotal}</TableCell>
+                    <TableCell>{materials.timber.producer || '-'}</TableCell>
+                    <TableCell className="text-right">{materials.timber.gwpTotal || '-'}</TableCell>
                   </TableRow>}
                   {isNotNil(materials.insulation) && <TableRow>
                     <TableCell>
@@ -364,8 +350,8 @@ export default async function Page({
                       </div>
                     </TableCell>
                     <TableCell>{materials.insulation.materialName}</TableCell>
-                    <TableCell>{materials.insulation.producer}</TableCell>
-                    <TableCell className="text-right">{materials.insulation.gwpTotal}</TableCell>
+                    <TableCell>{materials.insulation.producer || '-'}</TableCell>
+                    <TableCell className="text-right">{materials.insulation.gwpTotal || '-'}</TableCell>
                   </TableRow>}
                   {isNotNil(materials.fixings) && <TableRow>
                     <TableCell>
@@ -382,50 +368,53 @@ export default async function Page({
                       </div>
                     </TableCell>
                     <TableCell>{materials.fixings.materialName}</TableCell>
-                    <TableCell>{materials.fixings.producer}</TableCell>
-                    <TableCell className="text-right">{materials.fixings.gwpTotal}</TableCell>
+                    <TableCell>{materials.fixings.producer || '-'}</TableCell>
+                    <TableCell className="text-right">{materials.fixings.gwpTotal || '-'}</TableCell>
                   </TableRow>}
                 </TableBody>
               </Table>
             </AccordionContent>
           </section>
         </AccordionItem>
-        {(modelFile || assemblyFile || cuttingFile) && <AccordionItem asChild value="design">
+        {<AccordionItem asChild value="design">
           <section>
             <AccordionTrigger>
               <h3>Design</h3>
             </AccordionTrigger>
             <AccordionContent>
-              <Table>
+              {order && (modelFile || assemblyFile || cuttingFile) ? <Table>
                 <TableBody>
-                  {/* FIXME: airtable hosted content doesn't come with nice filenames! */}
                   {modelFile && <TableRow>
                     <TableCell className="font-medium">3D model</TableCell>
                     <TableCell className="text-right">
-                      <a href={modelFile}>
-                        {modelFile.split('/').pop()}
+                      <a href={modelFile} target="_blank">
+                        {truncate(modelFile.split('/').pop()) ||
+                          (order._3dmodelcustom ? 'Custom' : 'Github')}
                       </a>
                     </TableCell>
                   </TableRow>}
                   {assemblyFile &&
                   <TableRow>
-                    <TableCell className="font-medium">Production files</TableCell>
+                    <TableCell className="font-medium">Assembly manual</TableCell>
                     <TableCell className="text-right">
-                      <a href={assemblyFile}>
-                        {assemblyFile.split('/').pop()}
+                      <a href={assemblyFile} target="_blank">
+                        {/* custom assembly manuals are airtable attachment, so url is nonsense */}
+                        {order.assemblyManualCustom ? 'Custom' :
+                          (truncate(assemblyFile.split('/').pop()) || 'Github')}
                       </a>
                     </TableCell>
                   </TableRow>}
                   {cuttingFile && <TableRow>
-                    <TableCell className="font-medium">Assembly manual</TableCell>
+                    <TableCell className="font-medium">Production file</TableCell>
                     <TableCell className="text-right">
-                      <a href={cuttingFile}>
-                        {cuttingFile.split('/').pop()}
+                      <a href={cuttingFile} target="_blank">
+                        {truncate(cuttingFile.split('/').pop()) ||
+                          (order.cuttingFilesCustom ? 'Custom' : 'Github')}
                       </a>
                     </TableCell>
                   </TableRow>}
                 </TableBody>
-              </Table>
+              </Table> : <p className="text-center">No design files available</p>}
             </AccordionContent>
           </section>
         </AccordionItem>}
@@ -463,17 +452,22 @@ export default async function Page({
           </section>
         </AccordionItem>
       </Accordion>
-
-      {/* TODO: make available actions dependent on profile type (e.g. manufacturer, installer, owner etc.) */}
-      {/* TODO: make this button do appropriate action! (via server action, not including print label) */}
-      {/* i.e. wrap in a form (e.g. SingleButtonForm) */}
+      
       <div className="flex flex-col space-y-2">
-        {componentStatus === ComponentStatus.ReadyForProduction && 
-          <Button variant="default">Print label</Button>}
-        {STATUS_TRANSITIONS[componentStatus].map((statusTransition, i) => (
-          <Button key={i} variant="default">Mark as {lowerCase(statusTransition)}</Button>
-        ))}
+        {componentStatus === ComponentStatus.ReadyForProduction &&
+        component.label?.[0] && <Button variant="default" asChild>
+          {/* we can't have the pdf download directly on click since that is only permitted for same site origin */}
+          <a href={component.label[0]} target="_blank">
+            Download label
+          </a>
+        </Button>}
+        <StatusTransitionButtons
+          componentUid={uid}
+          componentRecordId={component.id}
+          currentComponentStatus={componentStatus}
+        />
       </div>
+
     </Suspense>
   )
 }
