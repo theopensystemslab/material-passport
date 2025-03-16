@@ -1,7 +1,11 @@
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
-import { ComponentStatus, Nil } from '@/lib/definitions'
+import {
+  ComponentStatus,
+  HistoryEvent,
+  Nil
+} from '@/lib/definitions'
 
 const FILE_EXTENSION_REGEX = /\.[^/.]+$/
 
@@ -25,6 +29,21 @@ export const getComponentStatusEnum = (status: string): ComponentStatus => {
     throw new Error(`Invalid status: ${status}`)
   }
   return ComponentStatusLookup[status]
+}
+
+export const HistoryEventLookup: { [key: string]: HistoryEvent } = {
+  'Design completed': HistoryEvent.DesignCompleted,
+  'Manufactured': HistoryEvent.Manufactured,
+  'Moved': HistoryEvent.Moved,
+  'Installed': HistoryEvent.Installed,
+  'Record': HistoryEvent.Record,
+}
+
+export const getHistoryEventEnum = (event: string): HistoryEvent => {
+  if (!HistoryEventLookup[event]) {
+    throw new Error(`Invalid event: ${event}`)
+  }
+  return HistoryEventLookup[event]
 }
 
 // handy util for truncating long filenames without losing the extension/file type

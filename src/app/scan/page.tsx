@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 const COMPONENT_UID_REGEX = /[a-z]{3}-\d{6}/i
-// we allow any junk (e.g. query string) to be tagged onto the end of these URLs - validating the domain is sufficient
+// we allow any junk (e.g. query string) to be tagged onto the end of these URLs - validating on domain and UID is sufficient
 const PASSPORT_URL_PRODUCTION_REGEX = new RegExp(
   `^(?:https?:\/\/)?(?:www\.)?wikihouse\.materialpassport\.info\/passport\/${COMPONENT_UID_REGEX.source}`, 'i')
 const PASSPORT_URL_PREVIEW_REGEX = new RegExp(
-  `^(?:https?:\/\/)?(?:www\.)?material-passport[a-z\-]+\.vercel\.app\/passport\/${COMPONENT_UID_REGEX.source}`, 'i')
+  `^(?:https?:\/\/)?(?:www\.)?material-passport(?:[a-z\-]+)?\.vercel\.app\/passport\/${COMPONENT_UID_REGEX.source}`, 'i')
 const PASSPORT_URL_LOCAL_REGEX = new RegExp(
   `^(?:https?:\/\/)?(?:www\.)?localhost:\d{4}\/passport\/${COMPONENT_UID_REGEX.source}`, 'i')
 

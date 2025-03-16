@@ -10,7 +10,16 @@ export enum ComponentStatus {
   InUse = 'In use',
 }
 
-// we also encode the possible transitions between statuses here
+export enum HistoryEvent {
+  DesignCompleted = 'Design completed',
+  Manufactured = 'Manufactured',
+  Moved = 'Moved',
+  Installed = 'Installed',
+  // catch-all for any other entry in the history record (i.e. user-submitted / not prompted by a status change)
+  Record = 'Record',
+}
+
+// encode the possible transitions between statuses (sometimes there are multiple options)
 export const STATUS_TRANSITIONS: Record<ComponentStatus, ComponentStatus[]> = {
   [ComponentStatus.DesignInProgress]: [],
   [ComponentStatus.ReadyForProduction]: [ComponentStatus.Manufactured],
@@ -19,6 +28,15 @@ export const STATUS_TRANSITIONS: Record<ComponentStatus, ComponentStatus[]> = {
   [ComponentStatus.ReceivedOnSite]: [ComponentStatus.Installed],
   [ComponentStatus.Installed]: [ComponentStatus.InUse],
   [ComponentStatus.InUse]: [],
+}
+
+// encode the status transition for which a given event is enscribed in the component history
+// note that we we don't issue an event for possible status transition
+export const EVENT_BY_NEW_STATUS: Partial<Record<ComponentStatus, HistoryEvent>> = {
+  [ComponentStatus.ReadyForProduction]: HistoryEvent.DesignCompleted,
+  [ComponentStatus.Manufactured]: HistoryEvent.Manufactured,
+  [ComponentStatus.ReceivedOnSite]: HistoryEvent.Moved,
+  [ComponentStatus.Installed]: HistoryEvent.Installed,
 }
 
 // gist some types here to build on the schema.ts file, for use in the airtable helper
