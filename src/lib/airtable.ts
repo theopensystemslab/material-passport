@@ -5,7 +5,7 @@ import {
   type Item,
   type Table,
 } from 'airtable-ts'
-import { isNil } from 'es-toolkit'
+import { isNil, isNotNil } from 'es-toolkit'
 import { memoize } from 'es-toolkit/function'
 import { unstable_cache as cache } from 'next/cache'
 
@@ -71,12 +71,12 @@ export const getRecordFromScan = async <I extends Item>(
   value: ValueOf<I>,
   fieldNameToMatch: keyof I | 'id' | Nil = 'id',
   { shouldThrow = false }: GetRecordOptions = {},
-): Promise<I | Nil> => {
+): Promise<I | null> => {
   if (isNil(fieldNameToMatch)) {
     const msg = 'No field name passed'
     if (shouldThrow) throw new Error(msg)
     console.warn(msg)
-    return undefined
+    return null
   }
   const records = await cachedScan()
   const record = records.find((record) => record[fieldNameToMatch] === value)
@@ -88,6 +88,20 @@ export const getRecordFromScan = async <I extends Item>(
   }
   console.debug(`Found record with field ${String(fieldNameToMatch)} having value ${value} in table`)
   return record
+}
+
+export const getRecordsFromScan = async <I extends Item>(
+  cachedScan: ReturnType<typeof getCachedScan<I>>,
+  values: ValueOf<I>[],
+  fieldNameToMatch: keyof I | 'id' | Nil = 'id',
+  { shouldThrow = false }: GetRecordOptions = {},
+): Promise<I[]> => {
+  const records = []
+  for (const value of values) {
+    const record = await getRecordFromScan(cachedScan, value, fieldNameToMatch, { shouldThrow })
+    if (isNotNil(record)) records.push(record)
+  }
+  return records
 }
 
 export const getRecordById = async <I extends Item>(
@@ -175,6 +189,21 @@ export const getRecordByField = async <I extends Item>(
   )
   return record
 }
+
+export const getRecordsByField = async <I extends Item>(
+  table: Table<I>,
+  fieldId: string | undefined,
+  values: string[] | number[],
+  { shouldThrow = false, baseId = undefined }: rawGetRecordOptions = {},
+): Promise<I[]> => {
+  const records = []
+  for (const value of values) {
+    const record = await getRecordByField<I>(table, fieldId, value, { shouldThrow, baseId })
+    if (isNotNil(record)) records.push(record)
+  }
+  return records
+}
+
 
 // we can use the mapping returned here to get field names from field IDs, which are less liable to change
 export const getReversedTableMapping = <T extends Table<I>, I extends Item>(

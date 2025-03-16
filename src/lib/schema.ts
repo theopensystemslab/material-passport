@@ -250,7 +250,7 @@ export interface Component extends Item {
   qrCodePng: string[],
   manufacturer: string[] | null,
   manufacturerRef: string | null,
-  number: number,
+  serial: number,
   series: string[] | null,
   release: string | null,
   passport: string,
@@ -288,7 +288,7 @@ export const componentsTable: Table<Component> = {
     qrCodePng: 'fldhEysXltad9cPHP',
     manufacturer: 'fldfjeNgtmgk4jyKi',
     manufacturerRef: 'fldIfTCxBP0o0n7BB',
-    number: 'fldY0cvMpbMyzYZ6t',
+    serial: 'fldY0cvMpbMyzYZ6t',
     series: 'fldmCjIXB2M3Mdtre',
     release: 'fldqIu7a3eecu0udu',
     passport: 'fldJwnSObU0XQkXE9',
@@ -321,7 +321,7 @@ export const componentsTable: Table<Component> = {
     qrCodePng: 'string[]',
     manufacturer: 'string[] | null',
     manufacturerRef: 'string | null',
-    number: 'number',
+    serial: 'number',
     series: 'string[] | null',
     release: 'string | null',
     passport: 'string',
@@ -348,7 +348,7 @@ export const componentsTable: Table<Component> = {
 
 export interface History extends Item {
   id: string,
-  historyRecord: string | null,
+  historyUid: string | null,
   component: string[],
   event: string,
   createdAt: number,
@@ -357,6 +357,7 @@ export interface History extends Item {
   description: string,
   photo: string[],
   distancedTravelled: number,
+  serial: number,
 }
 
 export const historyTable: Table<History> = {
@@ -364,7 +365,7 @@ export const historyTable: Table<History> = {
   baseId: 'appnmoqwzI63EC3D9',
   tableId: 'tblDphYPh2R0jsJM9',
   mappings: {
-    historyRecord: 'fldBOvuw9gV3wnyoH',
+    historyUid: 'fldBOvuw9gV3wnyoH',
     component: 'fld64voTPuEQcYvL1',
     event: 'fldvRJ66qCRXng7Dy',
     createdAt: 'fld9nLMqDcZRcNLkB',
@@ -373,9 +374,10 @@ export const historyTable: Table<History> = {
     description: 'fldulCHKK4AtIkWsU',
     photo: 'fldUZY9GfiSMy7Mz3',
     distancedTravelled: 'fldA9su74avUcg1Xf',
+    serial: 'fld0M9kXDdLyzyGlp',
   },
   schema: {
-    historyRecord: 'string | null',
+    historyUid: 'string | null',
     component: 'string[]',
     event: 'string',
     createdAt: 'number',
@@ -384,6 +386,7 @@ export const historyTable: Table<History> = {
     description: 'string',
     photo: 'string[]',
     distancedTravelled: 'number',
+    serial: 'number',
   },
 };
 

@@ -37,9 +37,10 @@ export default function Page() {
     {/* container for scanner limits how big it will grow (large scan portal looks weird) */}
     <div className="max-w-lg">
       <Scanner
-      // ignore any barcode format that is not a QR code
+        // ignore any barcode format that is not a QR code
         formats={['qr_code']}
         allowMultiple={false}
+        scanDelay={500}
         onScan={(result: IDetectedBarcode[]): void => {
           for (const qrCode of result) {
             console.log(qrCode)

@@ -37,17 +37,21 @@ import {
   getFieldNameMemoized,
   getRecordByField,
   getRecordFromScan,
+  getRecordsByField,
+  getRecordsFromScan,
 } from '@/lib/airtable'
-import { ComponentStatus, type Nil } from '@/lib/definitions'
+import { ComponentStatus } from '@/lib/definitions'
 import {
   type AllBlock,
   type Component,
+  type History,
   type Material,
   type OrderBase,
   type Project,
   type Supplier,
   allBlocksTable,
   componentsTable,
+  historyTable,
   materialsTable,
   orderBaseTable,
   projectsTable,
@@ -56,12 +60,14 @@ import {
 import { getComponentStatusEnum, truncate } from '@/lib/utils'
 
 const MAX_DECIMAL_PLACE_PRECISION: number = 1
+const SHORT_CACHE_TIME_SECONDS = 180
 
 // we use ISR to generate static passports at build and fetch fresh data at request time as needed
 export const revalidate = 180
 
 // we give each scan a separate tag to enable us to clear cache on demand (using revalidatePath)
-const getComponents = getCachedScan<Component>(componentsTable, 180)
+const getComponents = getCachedScan<Component>(componentsTable, SHORT_CACHE_TIME_SECONDS)
+const getHistory = getCachedScan<History>(historyTable, SHORT_CACHE_TIME_SECONDS)
 const getProjects = getCachedScan<Project>(projectsTable)
 const getOrders = getCachedScan<OrderBase>(orderBaseTable)
 const getMaterials = getCachedScan<Material>(materialsTable)
@@ -70,11 +76,13 @@ const getBlocks = getCachedScan<AllBlock>(allBlocksTable)
 
 // we also get any memoized field name lookups we might need
 const getComponentFieldName = getFieldNameMemoized(componentsTable)
+const getHistoryFieldName = getFieldNameMemoized(historyTable)
 
 // this runs once, at build time, to prepare static pages for every component
 export async function generateStaticParams(): Promise<{ uid: string }[]> {
   // kick off table scans for purpose of caching, to be accessed during page builds
   const getComponentsPromise = getComponents()
+  getHistory()
   getProjects()
   getOrders()
   getMaterials()
@@ -95,10 +103,11 @@ export default async function Page({params}: {
 }): Promise<JSX.Element> {
   const { uid } = await params
 
-  let component
+  let component: Component | null = null
+  const history: History[] = []
   try {
     if (process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD) {
-      // if generating at build time, use cached scan of components table
+      // if generating at build time, use cached scan of component and history tables
       const componentUidFieldName = getComponentFieldName(componentsTable.mappings?.componentUid)
       component = await getRecordFromScan<Component>(
         getComponents,
@@ -106,14 +115,29 @@ export default async function Page({params}: {
         componentUidFieldName,
         { shouldThrow: true },
       )
+      const historyUidFieldName = getHistoryFieldName(historyTable.mappings?.historyUid)
+      if (component?.history?.[0]) {
+        history.push(...await getRecordsFromScan<History>(
+          getHistory,
+          component.history,
+          historyUidFieldName,
+        ))
+      }
     } else {
-      // if generating at request time (or in development), fetch component directly
+      // if generating at request time (or in development), fetch component and history directly
       component = await getRecordByField<Component>(
         componentsTable,
         componentsTable.mappings?.componentUid,
         uid,
         { shouldThrow: true },
       )
+      if (component?.history?.[0]) {
+        history.push(...await getRecordsByField<History>(
+          historyTable,
+          historyTable.mappings?.historyUid,
+          component.history,
+        ))
+      }
     }
     // finally run a type check and validate that we have the correct record
     if (!component) {
@@ -122,16 +146,18 @@ export default async function Page({params}: {
     if (component && component.componentUid !== uid) {
       throw new Error(`Fetched wrong record: ${component.componentUid} != ${uid}`)
     }
+    if (history.length === 0) {
+      console.warn(`Component ${uid} has no entries in its history`)
+    }
   } catch (e) {
     console.error(e)
     notFound()
   }
-
   const componentStatus = getComponentStatusEnum(component.status)
 
-  // we also fetch related project, order, suppliers, library source and material records (but if any fail, we don't error out)
+  // we also fetch related project, order, suppliers, library source and material records (but if any fail, we still render)
   // we always use cached scans here (regardless of env), since these tables change less frequently
-  let project
+  let project: Project | null = null
   if (component.project?.[0]) {
     project = await getRecordFromScan<Project>(
       getProjects,
@@ -141,7 +167,7 @@ export default async function Page({params}: {
     console.warn(`Component ${uid} has no associated project`)
   }
   
-  let order
+  let order: OrderBase | null = null
   if (component.orderBase?.[0]) {
     order = await getRecordFromScan<OrderBase>(getOrders, component.orderBase[0])
   } else {
@@ -149,7 +175,7 @@ export default async function Page({params}: {
   }
 
   // some components may be manufactured by multiple agents (e.g. fabricated by one shop, assembled elsewhere)
-  const suppliers = []
+  const suppliers: Supplier[] = []
   if (component.manufacturer?.[0]) {
     for (const supplierId of component.manufacturer) {
       const supplier = await getRecordFromScan<Supplier>(getSuppliers, supplierId)
@@ -161,7 +187,7 @@ export default async function Page({params}: {
     console.warn(`Component ${uid} has no associated manufacturer(s)`)
   }
   
-  let block
+  let block: AllBlock | null = null
   if (component.librarySource?.[0]) {
     block = await getRecordFromScan<AllBlock>(getBlocks, component.librarySource[0])
   } else {
@@ -169,9 +195,9 @@ export default async function Page({params}: {
   }
 
   interface Materials {
-    timber?: Material | Nil,
-    insulation?: Material | Nil,
-    fixings?: Material | Nil,
+    timber?: Material | null,
+    insulation?: Material | null,
+    fixings?: Material | null,
   }
 
   // fetch various materials used in this component
@@ -197,6 +223,7 @@ export default async function Page({params}: {
 
   // FIXME: remove these logs - just for dev purposes
   console.log('component', component)
+  console.log('history', history)
   console.log('project', project)
   console.log('order', order)
   console.log('block', block)
@@ -268,29 +295,39 @@ export default async function Page({params}: {
                     </TableCell>
                   </TableRow>}
                   {isNotNil(component.totalMass) && <TableRow>
-                    <TableCell className="font-medium">Mass <small>(kg)</small></TableCell>
-                    <TableCell className="text-right">{round(component.totalMass, MAX_DECIMAL_PLACE_PRECISION)}</TableCell>
+                    <TableCell className="font-medium">Mass</TableCell>
+                    <TableCell className="text-right">{round(component.totalMass, MAX_DECIMAL_PLACE_PRECISION)} <small>kg</small></TableCell>
                   </TableRow>}
                   {/* TODO: add a link / tooltip to explain GWP? (e.g. https://en.wikipedia.org/wiki/Global_warming_potential) */}
                   {isNotNil(component.totalGwp) && <TableRow>
-                    <TableCell className="font-medium">Global warming potential</TableCell>
+                    <TableCell className="font-medium">
+                      Global warming potential <small>
+                        <a href="https://en.wikipedia.org/wiki/Global_warming_potential" target="_blank">(GWP)</a>
+                      </small>
+                    </TableCell>
                     <TableCell className="text-right">{round(component.totalGwp, MAX_DECIMAL_PLACE_PRECISION)}</TableCell>
                   </TableRow>}
                   {isNotNil(order?.gwpFossil) && <TableRow>
-                    <TableCell className="font-medium">GWP (fossil)</TableCell>
-                    <TableCell className="text-right">{round(order.gwpFossil, MAX_DECIMAL_PLACE_PRECISION)}</TableCell>
+                    <TableCell className="font-medium">GWP <small>(fossil)</small></TableCell>
+                    <TableCell className="text-right">
+                      {round(order.gwpFossil, MAX_DECIMAL_PLACE_PRECISION)}
+                    </TableCell>
                   </TableRow>}
                   {isNotNil(order?.gwpBiogenic) && <TableRow>
-                    <TableCell className="font-medium">GWP (biogenic)</TableCell>
-                    <TableCell className="text-right">{round(order.gwpBiogenic, MAX_DECIMAL_PLACE_PRECISION)}</TableCell>
+                    <TableCell className="font-medium">GWP <small>(biogenic)</small></TableCell>
+                    <TableCell className="text-right">
+                      {round(order.gwpBiogenic, MAX_DECIMAL_PLACE_PRECISION)}
+                    </TableCell>
                   </TableRow>}
                   {isNotNil(component.totalDistanceTravelled) && <TableRow>
-                    <TableCell className="font-medium">Distance travelled <small>(km)</small></TableCell>
-                    <TableCell className="text-right">{round(component.totalDistanceTravelled, MAX_DECIMAL_PLACE_PRECISION)}</TableCell>
+                    <TableCell className="font-medium">Distance travelled</TableCell>
+                    <TableCell className="text-right">
+                      {round(component.totalDistanceTravelled, MAX_DECIMAL_PLACE_PRECISION)} <small>km</small>
+                    </TableCell>
                   </TableRow>}
                   {isNotNil(component.totalDistanceTravelled) && <TableRow>
-                    <TableCell className="font-medium">Transport emissions <small>(kgCO<sub>2</sub>e)</small></TableCell>
-                    <TableCell className="text-right">{round(component.totalDistanceTravelled, MAX_DECIMAL_PLACE_PRECISION)}</TableCell>
+                    <TableCell className="font-medium">Transport emissions</TableCell>
+                    <TableCell className="text-right">{round(component.totalDistanceTravelled, MAX_DECIMAL_PLACE_PRECISION)}  <small>kgCO<sub>2</sub>e</small></TableCell>
                   </TableRow>}
                 </TableBody>
               </Table>
