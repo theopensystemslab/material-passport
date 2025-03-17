@@ -17,6 +17,7 @@ import {
   orderBaseTable,
   suppliersTable,
 } from '@/lib/schema'
+import { getDateReprFromEpoch } from '@/lib/utils'
 
 // we determine here some constants for overall layout of the label
 const CENTRAL_COLUMN_WIDTH_PS = 160 // + (x margin * 2) = 300 PS (i.e. ~ A6 width)
@@ -41,6 +42,7 @@ export const writePdfToStream = async (
   qrDataImage: string | undefined = undefined,
 ): Promise<boolean> => {
   try {
+    // TODO: use cached scans to fetch order and supplier data for the component ?
     const uid = component.componentUid as string
     const order = await getRecordById<OrderBase>(orderBaseTable, component.orderBase[0])
     if (!order) {
@@ -136,8 +138,7 @@ export const writePdfToStream = async (
 
     yAccumulatorPs += doc.currentLineHeight() + MINOR_GAP_PS
     doc.text('DATE:', X_MARGIN_PS, yAccumulatorPs)
-    // NB. date comes from airtable as seconds since epoch, but Date constructor expects ms
-    const date = new Date(component.createdAt * 1000).toISOString().split('T')[0]
+    const date = getDateReprFromEpoch(component.createdAt, { dateOnly: true })
     doc.text(date, getXPositionForRightAlignedText(doc, date), yAccumulatorPs)
 
     // TODO: adapt below to allow for indeterminate number of suppliers to be displayed (e.g. via a variation on getFontSizeForWidth)

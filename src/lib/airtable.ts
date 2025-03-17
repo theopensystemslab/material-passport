@@ -121,6 +121,19 @@ export const getRecordById = async <I extends Item>(
   return record
 }
 
+export const getRecordsById = async <I extends Item>(
+  table: Table<I>,
+  recordIds: string[],
+  { shouldThrow = false }: GetRecordOptions = {},
+): Promise<I[]> => {
+  const records = []
+  for (const recordId of recordIds) {
+    const record = await getRecordById<I>(table, recordId, { shouldThrow })
+    if (isNotNil(record)) records.push(record)
+  }
+  return records
+}
+
 // when using the 'raw' SDK, we can't rely on a table from our schema to provide the base ID, so we allow it to be passed
 interface rawGetRecordOptions {
   shouldThrow?: boolean

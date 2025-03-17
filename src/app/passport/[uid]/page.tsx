@@ -1,9 +1,19 @@
-import { isNotNil, round } from 'es-toolkit'
+import {
+  isNotNil,
+  lowerCase,
+  round
+} from 'es-toolkit'
 import { kebabCase } from 'es-toolkit/string'
 import {
-  Check,
+  Blocks,
+  CircleSlash2,
+  Factory,
   Image as ImageIcon,
   MoveLeft,
+  Pencil,
+  PencilRuler,
+  SquarePen,
+  Truck
 } from 'lucide-react'
 import { PHASE_PRODUCTION_BUILD } from 'next/constants'
 import Head from 'next/head'
@@ -12,6 +22,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { type JSX, Suspense } from 'react'
 
+import { AddRecordButton } from '@/app/passport/[uid]/AddRecordButton'
 import { StatusTransitionButtons } from '@/app/passport/[uid]/StatusTransitionButtons'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import {
@@ -31,16 +42,25 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Timeline, TimelineItem } from '@/components/ui/timeline'
+import {
+  Timeline,
+  TimelineConnector,
+  TimelineContent,
+  TimelineDescription,
+  TimelineDot,
+  TimelineItem,
+  TimelineSeparator,
+  TimelineTitle,
+} from '@/components/ui/timeline'
 import {
   getCachedScan,
   getFieldNameMemoized,
   getRecordByField,
   getRecordFromScan,
-  getRecordsByField,
+  getRecordsById,
   getRecordsFromScan,
 } from '@/lib/airtable'
-import { ComponentStatus } from '@/lib/definitions'
+import { ComponentStatus, HistoryEvent } from '@/lib/definitions'
 import {
   type AllBlock,
   type Component,
@@ -57,10 +77,23 @@ import {
   projectsTable,
   suppliersTable,
 } from '@/lib/schema'
-import { getComponentStatusEnum, truncate } from '@/lib/utils'
+import {
+  getComponentStatusEnum,
+  getDateReprFromEpoch,
+  getHistoryEventEnum,
+  getLocationReprFromHistory,
+  truncate
+} from '@/lib/utils'
 
 const MAX_DECIMAL_PLACE_PRECISION: number = 1
 const SHORT_CACHE_TIME_SECONDS = 180
+const ICON_BY_HISTORY_EVENT = {
+  [HistoryEvent.DesignCompleted]: PencilRuler,
+  [HistoryEvent.Manufactured]: Factory,
+  [HistoryEvent.Moved]: Truck,
+  [HistoryEvent.Installed]: Blocks,
+  [HistoryEvent.Record]: SquarePen,
+}
 
 // we use ISR to generate static passports at build and fetch fresh data at request time as needed
 export const revalidate = 180
@@ -104,6 +137,7 @@ export default async function Page({params}: {
   const { uid } = await params
 
   let component: Component | null = null
+  let componentStatus: ComponentStatus | null = null
   const history: History[] = []
   try {
     if (process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD) {
@@ -132,14 +166,13 @@ export default async function Page({params}: {
         { shouldThrow: true },
       )
       if (component?.history?.[0]) {
-        history.push(...await getRecordsByField<History>(
+        history.push(...await getRecordsById<History>(
           historyTable,
-          historyTable.mappings?.historyUid,
           component.history,
         ))
       }
     }
-    // finally run a type check and validate that we have the correct record
+    // run a type check and validate that we have the correct record
     if (!component) {
       throw new Error(`Failed to fetch component with UID ${uid}`)
     }
@@ -148,12 +181,16 @@ export default async function Page({params}: {
     }
     if (history.length === 0) {
       console.warn(`Component ${uid} has no entries in its history`)
+    } else {
+      console.debug('Ensuring history is sorted chronogically (i.e. ascending by time of creation)')
+      history.sort((a: History, b: History) => a.createdAt - b.createdAt)
     }
+    // finally get enum for component status
+    componentStatus = getComponentStatusEnum(component.status, { shouldThrow: true })
   } catch (e) {
     console.error(e)
     notFound()
   }
-  const componentStatus = getComponentStatusEnum(component.status)
 
   // we also fetch related project, order, suppliers, library source and material records (but if any fail, we still render)
   // we always use cached scans here (regardless of env), since these tables change less frequently
@@ -223,7 +260,9 @@ export default async function Page({params}: {
 
   // FIXME: remove these logs - just for dev purposes
   console.log('component', component)
-  console.log('history', history)
+  for (const record of history) {
+    console.log(`history record ${record.historyUid}:`, record)
+  }
   console.log('project', project)
   console.log('order', order)
   console.log('block', block)
@@ -260,6 +299,7 @@ export default async function Page({params}: {
           <Badge className={kebabCase(component.status)}>{component.status}</Badge>
         </div>
       </div>
+      {/* TODO: when we have no main image, use latest photo from history, if one exists */}
       <Card className="relative w-full h-64 lg:h-96 flex justify-center items-center">
         {mainImage ? <Image
           className="object-contain object-center rounded-md p-2"
@@ -453,55 +493,93 @@ export default async function Page({params}: {
             </AccordionContent>
           </section>
         </AccordionItem>}
-
-        {/* SAVE POINT - IGNORE EVERYTHING ABOVE THIS LINE */}
-
         <AccordionItem asChild value="history">
           <section>
             <AccordionTrigger>
               <h3>History</h3>
             </AccordionTrigger>
             <AccordionContent>
-              <Timeline>
-                <TimelineItem
-                  date="2024-01-01"
-                  title="Feature Released"
-                  description="New timeline component is now available"
-                  icon={<Check />}
-                  status="completed"
-                />
-                <TimelineItem
-                  date="2024-01-01"
-                  title="In Progress"
-                  description="Working on documentation"
-                  status="in-progress"
-                />
-                <TimelineItem
-                  date="2024-01-01"
-                  title="Upcoming"
-                  description="Planning future updates"
-                  status="pending"
-                />
-              </Timeline>
+              <div className="flex flex-col p-2 space-y-4">
+                <Timeline>
+                  {history?.[0] ? history.map((record, i) => (
+                    <TimelineItem key={i}>
+                      <TimelineSeparator>
+                        <TimelineDot>
+                          {record.event && (() => {
+                            const Icon = ICON_BY_HISTORY_EVENT[getHistoryEventEnum(record.event) as HistoryEvent]
+                            return <Icon />
+                          })()}
+                        </TimelineDot>
+                        <TimelineConnector />
+                      </TimelineSeparator>
+                      <TimelineContent>
+                        <TimelineTitle className="text-lg lg:text-xl font-semibold">{record.event}</TimelineTitle>
+                        <TimelineDescription className="text-md lg:text-lg text-foreground">{record.description}</TimelineDescription>
+                        {record.photo?.[0] && <div className="relative w-full h-64 lg:h-96">
+                          <Image
+                            className="object-contain object-left rounded-sm py-4 max-w-full"
+                            src={record.photo[0]}
+                            alt={`Photo for history event ${lowerCase(record.event)}`}
+                            sizes="(min-width: 1024px) 100vw, 100vw"
+                            fill
+                          />
+                        </div>}
+                        <br />
+                        <p className="text-muted-foreground">
+                          {getLocationReprFromHistory(record)}
+                        </p>
+                        <p className="text-muted-foreground">
+                          {getDateReprFromEpoch(record.createdAt, { pretty: true })}
+                        </p>
+                      </TimelineContent>
+                    </TimelineItem>
+                  )) : <TimelineItem>
+                    <TimelineSeparator>
+                      <TimelineDot>
+                        <CircleSlash2 />
+                      </TimelineDot>
+                      <TimelineConnector />
+                    </TimelineSeparator>
+                    <TimelineContent>
+                      <TimelineTitle className="text-md lg:text-lg font-semibold">
+                        No events recorded
+                      </TimelineTitle>
+                    </TimelineContent>
+                  </TimelineItem>}
+                  <TimelineItem>
+                    <TimelineSeparator>
+                      <TimelineDot>
+                        <Pencil/>
+                      </TimelineDot>
+                      <TimelineConnector />
+                    </TimelineSeparator>
+                    <AddRecordButton />
+                  </TimelineItem>
+                </Timeline> 
+              </div>
             </AccordionContent>
           </section>
         </AccordionItem>
       </Accordion>
       
-      <div className="flex flex-col space-y-2">
-        {componentStatus === ComponentStatus.ReadyForProduction &&
-        component.label?.[0] && <Button variant="default" asChild>
-          {/* we can't have the pdf download directly on click since that is only permitted for same site origin */}
-          <a href={component.label[0]} target="_blank">
-            Download label
-          </a>
-        </Button>}
-        <StatusTransitionButtons
-          componentUid={uid}
-          componentRecordId={component.id}
-          currentComponentStatus={componentStatus}
-        />
-      </div>
+      <section>
+        <div className="flex flex-col space-y-2 lg:space-y-4">
+          {componentStatus === ComponentStatus.ReadyForProduction &&
+        // since we can't control button variant dynamically according to media query, we do it manually with similar classes
+        component.label?.[0] && <Button variant="default" asChild className="rounded-md lg:h-10 lg:px-8 lg:py-4 lg:text-lg">
+            {/* we can't have the pdf download directly on click since that is only permitted for same site origin */}
+            <a href={component.label[0]} target="_blank">
+              Download label
+            </a>
+          </Button>}
+          <StatusTransitionButtons
+            componentUid={uid}
+            componentRecordId={component.id}
+            // we cast here to avoid tsc error (if it was null getComponentStatusEnum would have thrown and we'd show 404)
+            currentComponentStatus={componentStatus as ComponentStatus}
+          />
+        </div>
+      </section>
 
     </Suspense>
   )

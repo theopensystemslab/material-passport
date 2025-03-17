@@ -24,6 +24,7 @@ export const StatusTransitionButtons = (
       <Button
         key={i}
         variant="default"
+        className="rounded-md lg:h-10 lg:px-8 lg:py-4 lg:text-lg"
         onClick={() => changeComponentStatus(componentUid, componentRecordId, newStatus)}
       >
         Mark as {lowerCase(newStatus)}
