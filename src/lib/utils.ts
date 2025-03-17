@@ -70,7 +70,7 @@ export const getHistoryEventEnum = (
   event: string,
   { shouldThrow = false }: getEnumOptions = {}
 ): HistoryEvent | null => {
-  if (!ComponentStatusLookup[event]) {
+  if (!HistoryEventLookup[event]) {
     const msg = `Invalid event: ${event}`
     if (shouldThrow) throw new Error(msg)
     console.warn(msg)
@@ -115,13 +115,17 @@ export const getDateReprFromEpoch = (
 ): string => {
   // dates from airtable come as seconds since epoch, but Date constructor expects milliseconds
   const date = new Date(epoch * 1000)
-  // the result will be in UTC and we keep it that way for interoperability
-  const iso8601 = date.toISOString()
-  if (dateOnly) return iso8601.split('T')[0]
-  if (pretty) return (
-    `${date.getUTCDate()} ${MONTH_BY_INDEX[date.getUTCMonth()]} ${date.getUTCFullYear()}, ${date.getUTCHours()}:${date.getUTCMinutes()}`)
-  return iso8601
+  // the result will be in UTC and we keep it that way for interoperability / i18n
+  if (pretty) {
+    const datePretty = `${date.getUTCDate()} ${MONTH_BY_INDEX[date.getUTCMonth()]} ${date.getUTCFullYear()}`
+    return dateOnly ? datePretty : `${datePretty}, ${pad2(date.getUTCHours())}:${pad2(date.getUTCMinutes())}`
+  } else {
+    const iso8601 = date.toISOString()
+    return dateOnly ? iso8601.split('T')[0] : iso8601
+  }
 }
+
+const pad2 = (num: number) => String(num).padStart(2, '0')
 
 export const getLocationReprFromHistory = (history: History): string | null => {
   const { latitude, longitude } = history

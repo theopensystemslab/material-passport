@@ -13,8 +13,8 @@ export default async function Page({
     // TODO: make this double as the login page for now i.e. login as..., and have that context inform rest of app
     <div className="flex flex-col flex-grow justify-center items-center space-y-4">
       <Button variant="default" size="lg" asChild className="px-16 py-4">
-        <Link href={'/login'}>
-          Login
+        <Link href={'/project'}>
+          Find your project
         </Link>
       </Button>
       <Button variant="default" size="lg" asChild className="px-16 py-4">

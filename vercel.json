@@ -3,10 +3,6 @@
     {
       "path": "/api/airtable/sync-orders",
       "schedule": "*/15 * * * *"
-    },
-    {
-      "path": "/api/airtable/generate-pdf?uid=WHS-000143",
-      "schedule": "*/5 * * * *"
     }
   ]
 }

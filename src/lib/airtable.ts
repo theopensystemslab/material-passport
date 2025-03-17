@@ -86,7 +86,7 @@ export const getRecordFromScan = async <I extends Item>(
     console.warn(msg)
     return null
   }
-  console.debug(`Found record with field ${String(fieldNameToMatch)} having value ${value} in table`)
+  console.debug(`Found record with field '${String(fieldNameToMatch)}' having value '${value}' in table`)
   return record
 }
 

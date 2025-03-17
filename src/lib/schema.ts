@@ -354,9 +354,9 @@ export interface History extends Item {
   createdAt: number,
   latitude: number | null, // edit
   longitude: number | null, // edit
-  description: string,
+  description: string | null, // edit
   photo: string[],
-  distancedTravelled: number,
+  distancedTravelled: number | null, // edit
   serial: number,
 }
 
@@ -383,9 +383,9 @@ export const historyTable: Table<History> = {
     createdAt: 'number',
     latitude: 'number | null', // edit
     longitude: 'number | null', // edit
-    description: 'string',
+    description: 'string | null', // edit
     photo: 'string[]',
-    distancedTravelled: 'number',
+    distancedTravelled: 'number | null', // edit
     serial: 'number',
   },
 };

@@ -7,22 +7,21 @@ import { kebabCase } from 'es-toolkit/string'
 import {
   Blocks,
   CircleSlash2,
+  DraftingCompass,
   Factory,
   Image as ImageIcon,
   MoveLeft,
   Pencil,
-  PencilRuler,
   SquarePen,
   Truck
 } from 'lucide-react'
 import { PHASE_PRODUCTION_BUILD } from 'next/constants'
-import Head from 'next/head'
 import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { type JSX, Suspense } from 'react'
 
-import { AddRecordButton } from '@/app/passport/[uid]/AddRecordButton'
+import { AddRecordDialog } from '@/app/passport/[uid]/AddRecordDialog'
 import { StatusTransitionButtons } from '@/app/passport/[uid]/StatusTransitionButtons'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import {
@@ -86,9 +85,8 @@ import {
 } from '@/lib/utils'
 
 const MAX_DECIMAL_PLACE_PRECISION: number = 1
-const SHORT_CACHE_TIME_SECONDS = 180
 const ICON_BY_HISTORY_EVENT = {
-  [HistoryEvent.DesignCompleted]: PencilRuler,
+  [HistoryEvent.DesignCompleted]: DraftingCompass,
   [HistoryEvent.Manufactured]: Factory,
   [HistoryEvent.Moved]: Truck,
   [HistoryEvent.Installed]: Blocks,
@@ -99,8 +97,8 @@ const ICON_BY_HISTORY_EVENT = {
 export const revalidate = 180
 
 // we give each scan a separate tag to enable us to clear cache on demand (using revalidatePath)
-const getComponents = getCachedScan<Component>(componentsTable, SHORT_CACHE_TIME_SECONDS)
-const getHistory = getCachedScan<History>(historyTable, SHORT_CACHE_TIME_SECONDS)
+const getComponents = getCachedScan<Component>(componentsTable, 180)
+const getHistory = getCachedScan<History>(historyTable, 90)
 const getProjects = getCachedScan<Project>(projectsTable)
 const getOrders = getCachedScan<OrderBase>(orderBaseTable)
 const getMaterials = getCachedScan<Material>(materialsTable)
@@ -128,6 +126,10 @@ export async function generateStaticParams(): Promise<{ uid: string }[]> {
     .filter((component) => isNotNil(component.componentUid))
     .map((component) => ({ uid: component.componentUid as string }))
 }
+
+// TODO: implement dynamic metadata generation in favour of next/head
+// https://nextjs.org/docs/app/building-your-application/optimizing/metadata#dynamic-metadata
+// export async function generateMe
 
 export default async function Page({params}: {
   params: Promise<{
@@ -281,10 +283,6 @@ export default async function Page({params}: {
     // TODO: move Suspense/spinner up to root layout level?
     // https://nextjs.org/docs/app/building-your-application/routing/loading-ui-and-streaming
     <Suspense fallback={<LoadingSpinner />}>
-      {/* TODO: get this <head> hoisting so as to set page title in browser and/or pull out as custom component */}
-      <Head>
-        <title>{`Passport for component ${uid}`}</title>
-      </Head>
       {project && (
         <Button variant="ghost" size="sm" asChild className="p-0 justify-start text-sm lg:text-md">
           <Link href={`/project/${kebabCase(project.projectName)}`}>
@@ -507,7 +505,7 @@ export default async function Page({params}: {
                         <TimelineDot>
                           {record.event && (() => {
                             const Icon = ICON_BY_HISTORY_EVENT[getHistoryEventEnum(record.event) as HistoryEvent]
-                            return <Icon />
+                            return Icon ? <Icon /> : <></>
                           })()}
                         </TimelineDot>
                         <TimelineConnector />
@@ -553,7 +551,7 @@ export default async function Page({params}: {
                       </TimelineDot>
                       <TimelineConnector />
                     </TimelineSeparator>
-                    <AddRecordButton />
+                    <AddRecordDialog componentId={component.id} componentUid={uid}/>
                   </TimelineItem>
                 </Timeline> 
               </div>

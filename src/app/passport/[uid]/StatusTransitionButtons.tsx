@@ -4,7 +4,7 @@ import { lowerCase } from 'es-toolkit'
 import { type JSX } from 'react'
 import { DivProps } from 'react-html-props'
 
-import { changeComponentStatus } from '@/app/actions'
+import { changeComponentStatusAction } from '@/app/actions'
 import { Button } from '@/components/ui/button'
 import { ComponentStatus, STATUS_TRANSITIONS } from '@/lib/definitions'
 import { cn } from '@/lib/utils'
@@ -25,7 +25,7 @@ export const StatusTransitionButtons = (
         key={i}
         variant="default"
         className="rounded-md lg:h-10 lg:px-8 lg:py-4 lg:text-lg"
-        onClick={() => changeComponentStatus(componentUid, componentRecordId, newStatus)}
+        onClick={() => changeComponentStatusAction(componentUid, componentRecordId, newStatus)}
       >
         Mark as {lowerCase(newStatus)}
       </Button>

@@ -31,7 +31,7 @@ export const STATUS_TRANSITIONS: Record<ComponentStatus, ComponentStatus[]> = {
 }
 
 // encode the status transition for which a given event is enscribed in the component history
-// note that we we don't issue an event for possible status transition
+// note that we we don't record an event for every possible status transition
 export const EVENT_BY_NEW_STATUS: Partial<Record<ComponentStatus, HistoryEvent>> = {
   [ComponentStatus.ReadyForProduction]: HistoryEvent.DesignCompleted,
   [ComponentStatus.Manufactured]: HistoryEvent.Manufactured,

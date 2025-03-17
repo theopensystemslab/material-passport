@@ -35,19 +35,18 @@ export default function Page() {
 
   return (<div className="flex flex-col flex-grow justify-center items-center space-y-4">
     {/* container for scanner limits how big it will grow (large scan portal looks weird) */}
-    <div className="max-w-lg">
+    <div className="w-2/3 max-w-lg">
       <Scanner
         // ignore any barcode format that is not a QR code
+        // TODO: make sure the scanner fits in small screens
         formats={['qr_code']}
         allowMultiple={false}
-        scanDelay={500}
+        scanDelay={1000}
         onScan={(result: IDetectedBarcode[]): void => {
           for (const qrCode of result) {
-            console.log(qrCode)
             console.debug(`Scanned QR: ${qrCode.rawValue}`)
             if (qrCode.rawValue && validatePassportUrl(qrCode.rawValue)) {
               const uid = extractUidFromUrl(qrCode.rawValue)
-              console.log(uid)
               if (uid) {
               // if scanned QR encodes a valid passport URI/URL, and we can extract the UID, we navigate there
                 router.push(`/passport/${uid}`)

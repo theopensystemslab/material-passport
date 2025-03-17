@@ -48,8 +48,8 @@ export const GET = async (req: NextRequest): Promise<NextResponse> => {
         continue
       }
       // get component status enum from order status (brittle, but ok for now)
-      const status: ComponentStatus = getComponentStatusEnum(order.status)
-      if (COMPONENT_STATUSES_TO_IGNORE.has(status)) {
+      const status = getComponentStatusEnum(order.status)
+      if (status && COMPONENT_STATUSES_TO_IGNORE.has(status)) {
         console.debug(`Ignoring order ${order.orderRef} with status ${status}`)
         ordersIgnored++
         continue

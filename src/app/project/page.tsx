@@ -5,5 +5,5 @@ export default function Projects({
   params: Promise<object>
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
-  return <h1>PROJECTS</h1>
+  return <h1>Projects</h1>
 }
