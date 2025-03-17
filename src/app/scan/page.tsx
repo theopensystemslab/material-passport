@@ -33,9 +33,10 @@ export default function Page() {
   const router = useRouter()
   const [feedback, setFeedback] = useState('Scan the QR code on your component')
 
+  // TODO: finesse the sizing on the scanner - it's a bit janky on some mobiles
   return (<div className="flex flex-col flex-grow justify-center items-center space-y-4">
     {/* container for scanner limits how big it will grow (large scan portal looks weird) */}
-    <div className="w-2/3 max-w-lg">
+    <div className="w-2/3 h-auto max-w-lg">
       <Scanner
         // ignore any barcode format that is not a QR code
         // TODO: make sure the scanner fits in small screens

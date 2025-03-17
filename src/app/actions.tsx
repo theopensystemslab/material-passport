@@ -14,8 +14,9 @@ import { redirect } from 'next/navigation'
 
 import {
   getAirtableDb,
-  getCachedScan,
-  getRawAirtableBase
+  getComponents,
+  getProjects,
+  getRawAirtableBase,
 } from '@/lib/airtable'
 import {
   ComponentStatus,
@@ -23,18 +24,9 @@ import {
   HistoryEvent,
   Nil,
 } from '@/lib/definitions'
-import {
-  type Component,
-  type Project,
-  componentsTable,
-  historyTable,
-  projectsTable
-} from '@/lib/schema'
+import { componentsTable, historyTable } from '@/lib/schema'
 
 const PHOTO_BLOB_FOLDER = 'photo'
-
-const getComponents = getCachedScan<Component>(componentsTable, 180)
-const getProjects = getCachedScan<Project>(projectsTable)
 
 interface DownloadLabelsOptions {
   projectName?: string | Nil;

@@ -16,9 +16,25 @@ import type {
   TableMappingKeys,
   ValueOf,
 } from '@/lib/definitions'
-import { componentsTable } from '@/lib/schema'
+import {
+  type AllBlock,
+  type Component,
+  type History,
+  type Material,
+  type OrderBase,
+  type Project,
+  type Supplier,
+  allBlocksTable,
+  componentsTable,
+  historyTable,
+  materialsTable,
+  orderBaseTable,
+  projectsTable,
+  suppliersTable,
+} from '@/lib/schema'
 
 const DEFAULT_TABLE_REVALIDATION_PERIOD_SECONDS = 900
+const SHORT_CACHE_REVALIDATE_TIME_SECONDS = 60
 
 export const getAirtableDb = (): AirtableTs => {
   // NB. your AIRTABLE_API_KEY should be a PAT, but is referred to as an API key throughout the docs/code
@@ -260,3 +276,17 @@ export const getFieldNameMemoized = <I extends Item>(
   // memoizer can only take functions with 0 or 1 args, so we close over given table
   return memoize((fieldId: string | Nil) => getFieldNameByFieldId(table, fieldId))
 }
+
+// we give each scan a separate tag to enable us to clear cache on demand (using revalidatePath)
+export const getComponents = getCachedScan<Component>(componentsTable, SHORT_CACHE_REVALIDATE_TIME_SECONDS)
+export const getHistory = getCachedScan<History>(historyTable, SHORT_CACHE_REVALIDATE_TIME_SECONDS)
+export const getProjects = getCachedScan<Project>(projectsTable)
+export const getOrders = getCachedScan<OrderBase>(orderBaseTable)
+export const getMaterials = getCachedScan<Material>(materialsTable)
+export const getSuppliers = getCachedScan<Supplier>(suppliersTable)
+export const getBlocks = getCachedScan<AllBlock>(allBlocksTable)
+
+// we also export any memoized field name lookups we might need
+export const getComponentFieldName = getFieldNameMemoized(componentsTable)
+export const getHistoryFieldName = getFieldNameMemoized(historyTable)
+export const getProjectFieldName = getFieldNameMemoized(projectsTable)

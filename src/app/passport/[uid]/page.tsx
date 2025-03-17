@@ -52,12 +52,19 @@ import {
   TimelineTitle,
 } from '@/components/ui/timeline'
 import {
-  getCachedScan,
-  getFieldNameMemoized,
+  getBlocks,
+  getComponentFieldName,
+  getComponents,
+  getHistory,
+  getHistoryFieldName,
+  getMaterials,
+  getOrders,
+  getProjects,
   getRecordByField,
   getRecordFromScan,
   getRecordsById,
   getRecordsFromScan,
+  getSuppliers,
 } from '@/lib/airtable'
 import { ComponentStatus, HistoryEvent } from '@/lib/definitions'
 import {
@@ -68,13 +75,8 @@ import {
   type OrderBase,
   type Project,
   type Supplier,
-  allBlocksTable,
   componentsTable,
   historyTable,
-  materialsTable,
-  orderBaseTable,
-  projectsTable,
-  suppliersTable,
 } from '@/lib/schema'
 import {
   getComponentStatusEnum,
@@ -96,18 +98,6 @@ const ICON_BY_HISTORY_EVENT = {
 // we use ISR to generate static passports at build and fetch fresh data at request time as needed
 export const revalidate = 180
 
-// we give each scan a separate tag to enable us to clear cache on demand (using revalidatePath)
-const getComponents = getCachedScan<Component>(componentsTable, 180)
-const getHistory = getCachedScan<History>(historyTable, 90)
-const getProjects = getCachedScan<Project>(projectsTable)
-const getOrders = getCachedScan<OrderBase>(orderBaseTable)
-const getMaterials = getCachedScan<Material>(materialsTable)
-const getSuppliers = getCachedScan<Supplier>(suppliersTable)
-const getBlocks = getCachedScan<AllBlock>(allBlocksTable)
-
-// we also get any memoized field name lookups we might need
-const getComponentFieldName = getFieldNameMemoized(componentsTable)
-const getHistoryFieldName = getFieldNameMemoized(historyTable)
 
 // this runs once, at build time, to prepare static pages for every component
 export async function generateStaticParams(): Promise<{ uid: string }[]> {
@@ -133,8 +123,8 @@ export async function generateStaticParams(): Promise<{ uid: string }[]> {
 
 export default async function Page({params}: {
   params: Promise<{
-    uid: string;
-  }>;
+    uid: string
+  }>
 }): Promise<JSX.Element> {
   const { uid } = await params
 

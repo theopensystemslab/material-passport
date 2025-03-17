@@ -132,3 +132,10 @@ export const getLocationReprFromHistory = (history: History): string | null => {
   if (!latitude || !longitude) return null
   return `${round(latitude, 4)}°, ${round(longitude, 4)}°`
 }
+
+export const dekebab = (input: string): string => {
+  return input
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
