@@ -1,40 +1,46 @@
-# material-passports
+# Material Passport
 
 Track your WikiHouse blocks all the way home!
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-## Getting Started
+## Setup
 
-First, run the development server:
+Clone the repo, install packages with `pnpm i`, and run the development server with `pnpm dev`.
+
+Then navigate to [http://localhost:3000](http://localhost:3000) in your browser. Voilà!
+
+Development was done with Node 22 LTS (`22.14.0` specifically) and latest pnpm (`10.6.3`), as per the `package.json`.
+
+
+## Deployment
+
+Vercel deploys every PR as a 'preview' environment, to addresses like `material-passport-xxx-open-systems-labs-projects.vercel.app`. These function as our development/test environments.
+
+Similarly, `main` is deployed to [`material-passport.vercel.app`](https://material-passport.vercel.app/) - this is our 'staging' environment.
+
+Finally, `production` deploys to the site proper, at [`wikihouse.materialpassport.info`](https://wikihouse.materialpassport.info/).
+
+So to push latest changes from staging to prod, we can run something like this:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git checkout main
+git pull
+git branch -f production
+git push origin production
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Maintaining the Airtable schema
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The use of Airtable as a backend/db lends great flexibility but also brings possible instability - e.g. a column name change could crash the app. In order to make the app as robust as possible, we keep our own [schema](./src/lib/schema.ts) (in the form TypeScript interfaces etc) in the codebase. This allows us to query the airtable API using table, field and record IDs, which are invariable, rather than names.
 
-## Learn More
+However, this schema needs to be maintained against the state of the Airtable base. Especially after structural changes, we should run `./scripts/generate-types.ts` to renew the schema file, and then carefully pick the changes that make sense via `git add -p`.
 
-To learn more about Next.js, take a look at the following resources:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Notes on structure and design decisions
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Components which are used in one place only are co-located with the relevant `layout` or `page`. Components which are re-used multiple times / are more generic are in `src/components`. Shadcn library components (which are mostly untouched since installation) are in `src/components/ui`.
 
-## Deploy on Vercel
+- I had an issue which took several days to fix, to do with `pdfkit` trying to access files it needs to initiate (e.g. the `Helvetica.afm` font), but which Next was not bundling. This meant attempts to generate pdfs would fail. I first fixed this on local with the code in `src/lib/hacks.ts`, then with a more elegant solution involving custom Webpack config, but neither of these solutions translated to the production/Vercel build. _Finally_, I stumbled on the `serverExternalPackages` config option, which solves it everywhere in one line!
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Component UIDs have a 6 digit serial number / counter, so won't overflow until 100,000 exist, while the history UIDs have 7 digits, which allows for 1mn records - i.e. 10 records per component - before we'd need to extend this system.

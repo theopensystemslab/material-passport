@@ -80,7 +80,7 @@
   }
 
   h2 {
-    @apply scroll-m-8 border-b pb-2 text-xl font-semibold tracking-tight first:mt-0 lg:text-3xl;
+    @apply scroll-m-8 border-b pb-2 text-xl font-semibold tracking-tight first:mt-0 lg:text-2xl;
   }
 
   h3 {
@@ -111,44 +111,26 @@
 
 @layer components {
   .ready-for-production {
-    @apply bg-[hsl(var(--status-yellow-6))] !important;
-    &:hover {
-      @apply bg-[hsl(var(--status-yellow-7))] !important;
-    }
+    @apply bg-[hsl(var(--status-yellow-6))] hover:bg-[hsl(var(--status-yellow-7))] !important;
   }
 
   .manufactured {
-    @apply bg-[hsl(var(--status-teal-6))] !important;
-    &:hover {
-      @apply bg-[hsl(var(--status-teal-7))] !important;
-    }
+    @apply bg-[hsl(var(--status-teal-6))] hover:bg-[hsl(var(--status-teal-7))] !important;
   }
 
   .in-transit {
-    @apply bg-[hsl(var(--status-cyan-6))] !important;
-    &:hover {
-      @apply bg-[hsl(var(--status-cyan-7))] !important;
-    }
+    @apply bg-[hsl(var(--status-cyan-6))] hover:bg-[hsl(var(--status-cyan-7))] !important;
   }
 
   .received-on-site {
-    @apply bg-[hsl(var(--status-blue-6))] !important;
-    &:hover {
-      @apply bg-[hsl(var(--status-blue-7))] !important;
-    }
+    @apply bg-[hsl(var(--status-blue-6))] hover:bg-[hsl(var(--status-blue-7))] !important;
   }
 
   .installed {
-    @apply bg-[hsl(var(--status-indigo-6))] !important;
-    &:hover {
-      @apply bg-[hsl(var(--status-indigo-7))] !important;
-    }
+    @apply bg-[hsl(var(--status-indigo-6))] hover:bg-[hsl(var(--status-indigo-7))] !important;
   }
 
   .in-use {
-    @apply bg-[hsl(var(--status-green-6))] !important;
-    &:hover {
-      @apply bg-[hsl(var(--status-green-7))] !important;
-    }
+    @apply bg-[hsl(var(--status-green-6))] hover:bg-[hsl(var(--status-green-7))] !important;
   }
 }

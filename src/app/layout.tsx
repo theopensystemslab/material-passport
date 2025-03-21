@@ -2,18 +2,17 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { type ReactNode } from 'react'
 
-import { Footer } from '@/components/Footer'
-import { Header } from '@/components/Header'
+import { Footer } from '@/app/Footer'
+import { Header } from '@/app/Header'
 import './globals.css'
 
 
 const interSans = Inter({
-  variable: '--font-inter-sans',
   subsets: ['latin'],
 })
 
 export const metadata: Metadata = {
-  title: 'Component Passports',
+  title: 'Material Passport',
   description: 'Track your WikiHouse blocks all the way home',
 }
 
@@ -29,10 +28,10 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </head>
       <body
-        className={`${interSans.variable} antialiased bg-background text-foreground flex flex-col min-h-screen justify-start`}
+        className={`${interSans.className} antialiased bg-background text-foreground flex flex-col min-h-screen justify-start`}
       >
         <Header />
-        <main className="flex flex-col flex-1 container max-w-6xl mx-auto mb-auto p-8 pt-4 gap-4">
+        <main className="flex flex-col flex-1 container max-w-6xl mx-auto mb-auto p-8 pt-4 space-y-4">
           {children}
         </main>
         <Footer />

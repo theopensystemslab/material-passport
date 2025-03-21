@@ -7,6 +7,7 @@ import {
   AvatarImage
 } from '@/components/ui/avatar'
 
+
 interface LinkPropsWithClassName extends LinkProps {
   className?: string;
 }
