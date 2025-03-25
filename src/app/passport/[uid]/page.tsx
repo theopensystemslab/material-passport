@@ -287,6 +287,7 @@ export default async function Page({params}: {
           <Badge className={kebabCase(component.status)}>{component.status}</Badge>
         </div>
       </div>
+      {/* FIXME: resolve issue with airtable image URLs expiring after 2hrs (e.g. force revalidation at request time / store as blobs ?? */}
       {/* TODO: when we have no main image, use latest photo from history, if one exists */}
       <Card className="relative w-full h-64 lg:h-96 flex justify-center items-center">
         {mainImage ? <Image
