@@ -31,7 +31,7 @@ export const Header = ({ className, ...props }: HeaderPropsCN): JSX.Element => {
         <p className="scroll-m-8 text-xl font-semibold tracking-tight lg:text-2xl">
           Material Passport
         </p>
-      </ div>
+      </div>
       <ProfileButton href="/profile"/>
     </header>
   )

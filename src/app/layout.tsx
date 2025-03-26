@@ -26,6 +26,9 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        {/* Next will serve favicons at / as expected, although we keep them in app/ */}
+        <link rel="icon" href="/favicon.ico" type="image/png" sizes="34x34" />
+        <link rel="icon" href="/icon.svg" type="image/svg+xml" sizes="any" />
       </head>
       <body
         className={`${interSans.className} antialiased bg-background text-foreground flex flex-col min-h-screen justify-start`}

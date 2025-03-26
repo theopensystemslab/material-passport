@@ -1,26 +1,13 @@
-import {
-  isNotNil,
-  lowerCase,
-  round
-} from 'es-toolkit'
+import { isNotNil, round } from 'es-toolkit'
 import { kebabCase } from 'es-toolkit/string'
-import {
-  Blocks,
-  CircleSlash2,
-  DraftingCompass,
-  Factory,
-  Image as ImageIcon,
-  Pencil,
-  SquarePen,
-  Truck
-} from 'lucide-react'
+import { Image as ImageIcon } from 'lucide-react'
 import { PHASE_PRODUCTION_BUILD } from 'next/constants'
 import Image from 'next/image'
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { type JSX, Suspense } from 'react'
 
-import { AddRecordDialog } from '@/app/passport/[uid]/AddRecordDialog'
-import { StatusTransitionButtons } from '@/app/passport/[uid]/StatusTransitionButtons'
+// import { StatusTransitionButtons } from '@/app/passport/[uid]/StatusTransitionButtons'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { ReturnButton } from '@/components/ReturnButton'
 import {
@@ -30,7 +17,6 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
   Table,
@@ -41,186 +27,130 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import {
-  Timeline,
-  TimelineConnector,
-  TimelineContent,
-  TimelineDescription,
-  TimelineDot,
-  TimelineItem,
-  TimelineSeparator,
-  TimelineTitle,
-} from '@/components/ui/timeline'
-import {
   getBlocks,
-  getComponentFieldName,
   getComponents,
-  getHistory,
-  getHistoryFieldName,
   getMaterials,
+  getOrderFieldName,
   getOrders,
   getProjects,
   getRecordByField,
   getRecordFromScan,
-  getRecordsById,
   getRecordsFromScan,
   getSuppliers,
 } from '@/lib/airtable'
-import { ComponentStatus, HistoryEvent } from '@/lib/definitions'
+import { ComponentStatus } from '@/lib/definitions'
 import {
   type AllBlock,
   type Component,
-  type History,
   type Material,
   type OrderBase,
   type Project,
   type Supplier,
-  componentsTable,
-  historyTable,
+  orderBaseTable,
 } from '@/lib/schema'
 import {
+  dekebab,
   getComponentStatusEnum,
-  getDateReprFromEpoch,
-  getHistoryEventEnum,
-  getLocationReprFromHistory,
-  truncate
+  getTotalGwp,
+  truncate,
 } from '@/lib/utils'
 
 const MAX_DECIMAL_PLACE_PRECISION: number = 1
-const ICON_BY_HISTORY_EVENT = {
-  [HistoryEvent.DesignCompleted]: DraftingCompass,
-  [HistoryEvent.Manufactured]: Factory,
-  [HistoryEvent.Moved]: Truck,
-  [HistoryEvent.Installed]: Blocks,
-  [HistoryEvent.Record]: SquarePen,
-}
 
-// we use ISR to generate static passports at build and fetch fresh data at request time as needed
 export const revalidate = 180
 
-// this runs once, at build time, to prepare static pages for every component
-export async function generateStaticParams(): Promise<{ uid: string }[]> {
-  // kick off table scans for purpose of caching, to be accessed during page builds
-  const getComponentsPromise = getComponents()
-  getHistory()
-  getProjects()
-  getOrders()
-  getMaterials()
-  getSuppliers()
-  getBlocks()
-  // wait for component scan to complete
-  const components = await getComponentsPromise
-  // ignore any records without UID (none should exist anyway)
-  return components
-    .filter((component) => isNotNil(component.componentUid))
-    .map((component) => ({ uid: component.componentUid as string }))
+export async function generateStaticParams(): Promise<{ ref: string }[]> {
+  const orders = await getOrders()
+  // console.log('orders', orders)
+  return orders
+    .filter((order) => isNotNil(order.orderRef))
+    .map((order) => ({ ref: order.orderRef as string }))
 }
-
-// TODO: implement dynamic metadata generation in favour of next/head
-// https://nextjs.org/docs/app/building-your-application/optimizing/metadata#dynamic-metadata
 
 export default async function Page({params}: {
   params: Promise<{
-    uid: string
+    slug: string,
+    ref: string
   }>
 }): Promise<JSX.Element> {
-  const { uid } = await params
+  const { slug, ref } = await params
+  const projectName = dekebab(slug)
+  console.debug(`Attempting to build page for order ${ref} of project ${projectName}`)
 
-  let component: Component | null = null
-  let componentStatus: ComponentStatus | null = null
-  const history: History[] = []
+  let order: OrderBase | null = null
+  let orderStatus: ComponentStatus | null = null
   try {
     if (process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD) {
-      // if generating at build time, use cached scan of component and history tables
-      const componentUidFieldName = getComponentFieldName(componentsTable.mappings?.componentUid)
-      component = await getRecordFromScan<Component>(
-        getComponents,
-        uid,
-        componentUidFieldName,
+      const orderRefFieldName = getOrderFieldName(orderBaseTable.mappings?.orderRef)
+      order = await getRecordFromScan<OrderBase>(
+        getOrders,
+        ref,
+        orderRefFieldName,
         { shouldThrow: true },
-      )
-      const historyUidFieldName = getHistoryFieldName(historyTable.mappings?.historyUid)
-      if (component?.history?.[0]) {
-        history.push(...await getRecordsFromScan<History>(
-          getHistory,
-          component.history,
-          historyUidFieldName,
-        ))
-      }
-    } else {
-      // if generating at request time (or in development), fetch component and history directly
-      component = await getRecordByField<Component>(
-        componentsTable,
-        componentsTable.mappings?.componentUid,
-        uid,
+      )} else {
+      order = await getRecordByField<OrderBase>(
+        orderBaseTable,
+        orderBaseTable.mappings?.orderRef,
+        ref,
         { shouldThrow: true },
-      )
-      if (component?.history?.[0]) {
-        history.push(...await getRecordsById<History>(
-          historyTable,
-          component.history,
-        ))
-      }
+      )}
+    if (!order) {
+      throw new Error(`Failed to fetch order with ref ${ref}`)
     }
-    // run a type check and validate that we have the correct record
-    if (!component) {
-      throw new Error(`Failed to fetch component with UID ${uid}`)
+    if (order && order.orderRef !== ref) {
+      throw new Error(`Fetched wrong record: ${order.orderRef} != ${ref}`)
     }
-    if (component && component.componentUid !== uid) {
-      throw new Error(`Fetched wrong record: ${component.componentUid} != ${uid}`)
-    }
-    if (history.length === 0) {
-      console.warn(`Component ${uid} has no entries in its history`)
-    } else {
-      console.debug('Ensuring history is sorted chronogically (i.e. ascending by time of creation)')
-      history.sort((a: History, b: History) => a.createdAt - b.createdAt)
-    }
-    // finally get enum for component status (and type check)
-    componentStatus = getComponentStatusEnum(component.status, { shouldThrow: true })
-    if (!componentStatus) {
-      throw new Error(`Component ${uid} has no status`)
+    orderStatus = getComponentStatusEnum(order.status, { shouldThrow: true })
+    if (!orderStatus) {
+      throw new Error(`Order ${ref} has no status`)
     }
   } catch (e) {
     console.error(e)
     notFound()
   }
 
-  // we also fetch related project, order, suppliers, library source and material records (but if any fail, we still render)
-  // we always use cached scans here (regardless of env), since these tables change less frequently
-  let project: Project | null = null
-  if (component.project?.[0]) {
-    project = await getRecordFromScan<Project>(
-      getProjects,
-      component.project[0],
-    )
-  } else {
-    console.warn(`Component ${uid} has no associated project`)
+  // since we expect multiple components in many cases, we use the scan rather than fetching them individually
+  const components: Component[] = []
+  if (order?.components?.[0]) {
+    components.push(...await getRecordsFromScan<Component>(
+      getComponents,
+      order.components,
+    ))
   }
-  
-  let order: OrderBase | null = null
-  if (component.orderBase?.[0]) {
-    order = await getRecordFromScan<OrderBase>(getOrders, component.orderBase[0])
-  } else {
-    console.warn(`Component ${uid} has no associated order`)
+  if (components.length === 0) {
+    console.warn(`Order ${ref} has no associated components`)
   }
 
-  // some components may be manufactured by multiple agents (e.g. fabricated by one shop, assembled elsewhere)
+  let project: Project | null = null
+  if (order.project?.[0]) {
+    project = await getRecordFromScan<Project>(
+      getProjects,
+      order.project[0],
+    )
+    if (order.projectName !== projectName) {
+      console.error(`Fetched wrong record: ${order.projectName} != ${projectName}`)
+    }
+  } else {
+    console.warn(`Order ${ref} has no associated project`)
+  }
+  
   const suppliers: Supplier[] = []
-  if (component.manufacturer?.[0]) {
-    for (const supplierId of component.manufacturer) {
+  if (order.supplier?.[0]) {
+    for (const supplierId of order.supplier) {
       const supplier = await getRecordFromScan<Supplier>(getSuppliers, supplierId)
       if (supplier) {
         suppliers.push(supplier)
       }
     }
   } else {
-    console.warn(`Component ${uid} has no associated manufacturer(s)`)
+    console.warn(`Order ${ref} has no associated manufacturer(s)`)
   }
   
   let block: AllBlock | null = null
-  if (component.librarySource?.[0]) {
-    block = await getRecordFromScan<AllBlock>(getBlocks, component.librarySource[0])
+  if (order.librarySource?.[0]) {
+    block = await getRecordFromScan<AllBlock>(getBlocks, order.librarySource[0])
   } else {
-    console.warn(`Component ${uid} has no associated block library source`)
+    console.warn(`Order ${ref} has no associated block library source`)
   }
 
   interface Materials {
@@ -229,78 +159,69 @@ export default async function Page({params}: {
     fixings?: Material | null,
   }
 
-  // fetch various materials used in this component
   const materials: Materials = {}
-  if (component.materialsTimber?.[0]) {
+  if (order.materialsTimber?.[0]) {
     materials.timber = await getRecordFromScan<Material>(
-      getMaterials, component.materialsTimber[0])
+      getMaterials, order.materialsTimber[0])
   } else {
-    console.warn(`Component ${uid} has no associated timber material`)
+    console.warn(`Order ${ref} has no associated timber material`)
   }
-  if (component.materialsInsulation?.[0]) {
+  if (order.materialsInsulation?.[0]) {
     materials.insulation = await getRecordFromScan<Material>(
-      getMaterials, component.materialsInsulation[0])
+      getMaterials, order.materialsInsulation[0])
   } else {
-    console.warn(`Component ${uid} has no associated insulation material`)
+    console.warn(`Order ${ref} has no associated insulation material`)
   }
-  if (component.materialsFixings?.[0]) {
+  if (order.materialsFixings?.[0]) {
     materials.fixings = await getRecordFromScan<Material>(
-      getMaterials, component.materialsFixings[0])
+      getMaterials, order.materialsFixings[0])
   } else {
-    console.warn(`Component ${uid} has no associated fixings material`)
+    console.warn(`Order ${ref} has no associated fixings material`)
   }
 
   // FIXME: remove these logs - just for dev purposes
-  // console.log('component', component)
-  // for (const record of history) {
-  //   console.log(`history record ${record.historyUid}:`, record)
-  // }
-  // console.log('project', project)
-  // console.log('order', order)
-  // console.log('block', block)
-  // for (const supplier of suppliers) {
-  //   console.log(`supplier ${supplier.supplierName}`, supplier)
-  // }
+  console.log('order', order)
+  for (const component of components) {
+    console.log(`history record ${component.componentUid}:`, component)
+  }
+  console.log('project', project)
+  console.log('block', block)
+  for (const supplier of suppliers) {
+    console.log(`supplier ${supplier.supplierName}`, supplier)
+  }
 
-  // fix some variables here for expediency
   const mainImage = order?.mainImageCustom?.[0] || order?.mainImageFromLibrarySource?.[0]
-  // custom assembly manual is an attachment, the rest are URLs
   const modelFile = order?._3dmodelcustom || order?.githubModelDetailedFromLibrarySource
   const assemblyFile = order?.assemblyManualCustom?.[0] || order?.githubAssemblyGuideFromLibrarySource
   const cuttingFile = order?.cuttingFilesCustom || order?.githubCuttingFileFromLibrarySource
+  const totalGwp = getTotalGwp(order.gwpFromMaterialsTimber, order.gwpFromMaterialsInsulation, order.sheetQuantityPerBlock)
 
+  // much of the below is vendored from passport page - changes there should be reflected here (or abstracted into shared components)
   return (
-    // TODO: move Suspense/spinner up to root layout level?
-    // https://nextjs.org/docs/app/building-your-application/routing/loading-ui-and-streaming
     <Suspense fallback={<LoadingSpinner />}>
-      {project && order && <ReturnButton
-        href={`/project/${kebabCase(project.projectName)}/${order.orderRef}`}
-        label="Choose another passport"
+      {project && <ReturnButton
+        href={`/project/${kebabCase(project.projectName)}`}
+        label={project.projectName}
       />}
       <div className="flex flex-col space-y-2">
-        <h1>{component.componentName}</h1>
+        <h1>{order.componentName}</h1>
         <div className="flex justify-between">
-          <small>#{component.componentUid}</small>
-          <Badge className={kebabCase(componentStatus)}>{componentStatus}</Badge>
+          <small>#{order.orderRef.substring(0, 4)}</small>
+          <Badge className={kebabCase(orderStatus)}>{orderStatus}</Badge>
         </div>
       </div>
-      {/* FIXME: resolve issue with airtable image URLs expiring after 2hrs (e.g. force revalidation at request time / store as blobs ?? */}
-      {/* TODO: when we have no main image, use latest photo from history, if one exists */}
       <Card className="relative w-full h-64 lg:h-96 flex justify-center items-center">
         {mainImage ? <Image
           className="object-contain object-center rounded-md p-2"
           src={mainImage}
-          alt={`Orthogonal diagram of ${component.componentName}`}
-          // images are svg so no need to optimise (alternatively we could set dangerouslyAllowSVG in next config)
+          alt={`Orthogonal diagram of ${order.componentName}`}
           unoptimized
           priority
           fill
         /> : <ImageIcon className="w-full h-16 lg:h-24 opacity-70" />
         }
       </Card>
-      {/* we use the powerful `asChild` flag (from shadcn/Radix) to enforce semantic html */}
-      {/* https://www.radix-ui.com/primitives/docs/guides/composition */}
-      <Accordion type="multiple" defaultValue={['info']}>
+      <Accordion type="multiple" defaultValue={['components']}>
         <AccordionItem asChild value="info">
           <section>
             <AccordionTrigger>
@@ -309,7 +230,6 @@ export default async function Page({params}: {
             <AccordionContent>
               <Table>
                 <TableBody>
-                  {/* TODO: we don't bother with a header row (data is self-explanatory) - check if this is bad a11y? */}
                   {isNotNil(block?.name) && <TableRow>
                     <TableCell className="font-medium">Block library</TableCell>
                     <TableCell className="text-right text-nowrap">{block.name}</TableCell>
@@ -320,17 +240,17 @@ export default async function Page({params}: {
                       {suppliers.map(supplier => supplier.supplierName).join('\n')}
                     </TableCell>
                   </TableRow>}
-                  {isNotNil(component.totalMass) && <TableRow>
+                  {isNotNil(order.massPerBlock) && <TableRow>
                     <TableCell className="font-medium">Mass</TableCell>
-                    <TableCell className="text-right">{round(component.totalMass, MAX_DECIMAL_PLACE_PRECISION)} <small>kg</small></TableCell>
+                    <TableCell className="text-right">{round(order.massPerBlock, MAX_DECIMAL_PLACE_PRECISION)} <small>kg</small></TableCell>
                   </TableRow>}
-                  {isNotNil(component.totalGwp) && <TableRow>
+                  {isNotNil(totalGwp) && <TableRow>
                     <TableCell className="font-medium">
                       Global warming potential <small>
                         <a href="https://en.wikipedia.org/wiki/Global_warming_potential" target="_blank">(GWP)</a>
                       </small>
                     </TableCell>
-                    <TableCell className="text-right">{round(component.totalGwp, MAX_DECIMAL_PLACE_PRECISION)}</TableCell>
+                    <TableCell className="text-right">{round(totalGwp, MAX_DECIMAL_PLACE_PRECISION)}</TableCell>
                   </TableRow>}
                   {isNotNil(order?.gwpFossil) && <TableRow>
                     <TableCell className="font-medium">GWP <small>(fossil)</small></TableCell>
@@ -344,7 +264,7 @@ export default async function Page({params}: {
                       {round(order.gwpBiogenic, MAX_DECIMAL_PLACE_PRECISION)}
                     </TableCell>
                   </TableRow>}
-                  {isNotNil(component.totalDistanceTravelled) && <TableRow>
+                  {/* {isNotNil(component.totalDistanceTravelled) && <TableRow>
                     <TableCell className="font-medium">Distance travelled</TableCell>
                     <TableCell className="text-right">
                       {round(component.totalDistanceTravelled, MAX_DECIMAL_PLACE_PRECISION)} <small>km</small>
@@ -353,7 +273,7 @@ export default async function Page({params}: {
                   {isNotNil(component.totalDistanceTravelled) && <TableRow>
                     <TableCell className="font-medium">Transport emissions</TableCell>
                     <TableCell className="text-right">{round(component.totalDistanceTravelled, MAX_DECIMAL_PLACE_PRECISION)}  <small>kgCO<sub>2</sub>e</small></TableCell>
-                  </TableRow>}
+                  </TableRow>} */}
                 </TableBody>
               </Table>
             </AccordionContent>
@@ -374,7 +294,6 @@ export default async function Page({params}: {
                     <TableHead className="text-right">CO<sub>2</sub></TableHead>
                   </TableRow>
                 </TableHeader>
-                {/* TODO: make the below thumbnail images expandable for inspection, and extract row as separate component */}
                 <TableBody>
                   {isNotNil(materials.timber) && <TableRow>
                     <TableCell>
@@ -457,7 +376,6 @@ export default async function Page({params}: {
                     <TableCell className="font-medium">Assembly manual</TableCell>
                     <TableCell className="text-right">
                       <a href={assemblyFile} target="_blank">
-                        {/* custom assembly manuals are airtable attachment, so url is nonsense */}
                         {order.assemblyManualCustom ? 'Custom' :
                           (truncate(assemblyFile.split('/').pop()) || 'Github')}
                       </a>
@@ -477,93 +395,51 @@ export default async function Page({params}: {
             </AccordionContent>
           </section>
         </AccordionItem>}
-        <AccordionItem asChild value="history">
+        <AccordionItem asChild value="components">
           <section>
             <AccordionTrigger>
-              <h3>History</h3>
+              <h3>Components</h3>
             </AccordionTrigger>
             <AccordionContent>
-              <div className="flex flex-col p-2 space-y-4">
-                <Timeline>
-                  {history?.[0] ? history.map((record, i) => (
-                    <TimelineItem key={i}>
-                      <TimelineSeparator>
-                        <TimelineDot>
-                          {record.event && (() => {
-                            const Icon = ICON_BY_HISTORY_EVENT[getHistoryEventEnum(record.event) as HistoryEvent]
-                            return Icon ? <Icon /> : <></>
-                          })()}
-                        </TimelineDot>
-                        <TimelineConnector />
-                      </TimelineSeparator>
-                      <TimelineContent>
-                        <TimelineTitle className="text-lg lg:text-xl font-semibold">{record.event}</TimelineTitle>
-                        <TimelineDescription className="text-md lg:text-lg text-foreground">{record.description}</TimelineDescription>
-                        {record.photo?.[0] && <div className="relative w-full h-64 lg:h-96">
-                          <Image
-                            className="object-contain object-left rounded-sm py-4 max-w-full"
-                            src={record.photo[0]}
-                            alt={`Photo for history event ${lowerCase(record.event)}`}
-                            sizes="(min-width: 1024px) 100vw, 100vw"
-                            fill
-                          />
-                        </div>}
-                        <br />
-                        <p className="text-muted-foreground">
-                          {getLocationReprFromHistory(record)}
-                        </p>
-                        <p className="text-muted-foreground">
-                          {getDateReprFromEpoch(record.createdAt, { pretty: true })}
-                        </p>
-                      </TimelineContent>
-                    </TimelineItem>
-                  )) : <TimelineItem>
-                    <TimelineSeparator>
-                      <TimelineDot>
-                        <CircleSlash2 />
-                      </TimelineDot>
-                      <TimelineConnector />
-                    </TimelineSeparator>
-                    <TimelineContent>
-                      <TimelineTitle className="text-md lg:text-lg font-semibold">
-                        No events recorded
-                      </TimelineTitle>
-                    </TimelineContent>
-                  </TimelineItem>}
-                  <TimelineItem>
-                    <TimelineSeparator>
-                      <TimelineDot>
-                        <Pencil/>
-                      </TimelineDot>
-                      <TimelineConnector />
-                    </TimelineSeparator>
-                    <AddRecordDialog componentId={component.id} componentUid={uid}/>
-                  </TimelineItem>
-                </Timeline> 
-              </div>
+              {components?.[0] ? (
+                <Table>
+                  <TableBody>
+                    {components.map((component, i) => {
+                      const componentStatus = getComponentStatusEnum(component.status)
+                      return (
+                        <TableRow key={i}>
+                          <TableCell>
+                            <Link href={`/passport/${component.componentUid}`}>
+                              {component.componentUid}
+                            </Link>
+                          </TableCell>
+                          {componentStatus && <TableCell className="text-right text-nowrap">
+                            <Badge className={kebabCase(componentStatus)}>{componentStatus}</Badge>
+                          </TableCell>}
+                        </TableRow>
+                      )})}
+                  </TableBody>
+                </Table>
+              ) : <p>No components found</p> }
             </AccordionContent>
           </section>
         </AccordionItem>
       </Accordion>
       
-      <section>
+      {/* <section>
         <div className="flex flex-col space-y-2 lg:space-y-4">
-          {componentStatus === ComponentStatus.ReadyForProduction &&
-        // since we can't control button variant dynamically according to media query, we do it manually with similar classes
-        component.label?.[0] && <Button variant="default" asChild className="rounded-md lg:h-10 lg:px-8 lg:py-4 lg:text-lg">
-            {/* we can't have the pdf download directly on click since that is only permitted for same site origin */}
-            <a href={component.label[0]} target="_blank">
-              Download label
-            </a>
-          </Button>}
+          {orderStatus === ComponentStatus.ReadyForProduction &&
+          // TODO: write server action to download all labels for a given component type, and attach here as onClick
+            <Button variant="default" asChild className="rounded-md lg:h-10 lg:px-8 lg:py-4 lg:text-lg">
+              Download labels
+            </Button>}
           <StatusTransitionButtons
             componentUid={uid}
             componentRecordId={component.id}
-            // we cast here to avoid tsc error (if it was null getComponentStatusEnum would have thrown and we'd show 404)
             currentComponentStatus={componentStatus as ComponentStatus}
           />
         </div>
-      </section>
+      </section> */}
 
     </Suspense>
   )

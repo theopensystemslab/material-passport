@@ -139,3 +139,13 @@ export const dekebab = (input: string): string => {
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ')
 }
+
+// logic below is copied from formula for 'Total GWP' field on Components table
+export const getTotalGwp = (
+  gwpTimber: number | null,
+  gwpInsulation: number | null,
+  sheetQuantity: number | null,
+) => {
+  if (!gwpTimber || !gwpInsulation || !sheetQuantity) return null
+  return ((gwpTimber / (1/(1.22*2.44*0.018))) * sheetQuantity) + gwpInsulation
+}

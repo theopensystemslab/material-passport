@@ -1,5 +1,6 @@
 // this enum of possible statuses is non-exhaustive for the moment, and naming may not be final
 // any change here should also be reflected in the companion lookup logic in /helpers/utils.ts
+// since the possible values are currently identical, this doubles up as an 'OrderStatus' enum
 export enum ComponentStatus {
   DesignInProgress = 'Design in progress',
   ReadyForProduction = 'Ready for production', // aka. ReadyForManufacture (as per the miro)

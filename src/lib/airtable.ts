@@ -199,7 +199,7 @@ export const getRecordByField = async <I extends Item>(
     return null
   }
   const recordId = await getRecordIdByField(
-    componentsTable.tableId,
+    table.tableId,
     fieldId,
     value,
     { shouldThrow, baseId },
@@ -290,3 +290,4 @@ export const getBlocks = getCachedScan<AllBlock>(allBlocksTable)
 export const getComponentFieldName = getFieldNameMemoized(componentsTable)
 export const getHistoryFieldName = getFieldNameMemoized(historyTable)
 export const getProjectFieldName = getFieldNameMemoized(projectsTable)
+export const getOrderFieldName = getFieldNameMemoized(orderBaseTable)
