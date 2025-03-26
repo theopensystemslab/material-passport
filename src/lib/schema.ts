@@ -351,13 +351,13 @@ export interface History extends Item {
   historyUid: string | null,
   component: string[],
   event: string,
-  createdAt: number,
   latitude: number | null, // edit
   longitude: number | null, // edit
   description: string | null, // edit
   photo: string[],
   distancedTravelled: number | null, // edit
   serial: number,
+  createdAt: number,
 }
 
 export const historyTable: Table<History> = {
@@ -368,25 +368,25 @@ export const historyTable: Table<History> = {
     historyUid: 'fldBOvuw9gV3wnyoH',
     component: 'fld64voTPuEQcYvL1',
     event: 'fldvRJ66qCRXng7Dy',
-    createdAt: 'fld9nLMqDcZRcNLkB',
     latitude: 'fld3VzHMZmcDI47PX',
     longitude: 'fldAkF1Qgjyis2Ofu',
     description: 'fldulCHKK4AtIkWsU',
     photo: 'fldUZY9GfiSMy7Mz3',
     distancedTravelled: 'fldA9su74avUcg1Xf',
     serial: 'fld0M9kXDdLyzyGlp',
+    createdAt: 'fld9nLMqDcZRcNLkB',
   },
   schema: {
     historyUid: 'string | null',
     component: 'string[]',
     event: 'string',
-    createdAt: 'number',
     latitude: 'number | null', // edit
     longitude: 'number | null', // edit
     description: 'string | null', // edit
     photo: 'string[]',
     distancedTravelled: 'number | null', // edit
     serial: 'number',
+    createdAt: 'number',
   },
 };
 

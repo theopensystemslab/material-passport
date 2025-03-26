@@ -1,19 +1,14 @@
 import { kebabCase } from 'es-toolkit'
 import Link from 'next/link'
 
+import { ReturnButton } from '@/components/ReturnButton'
 import { Button } from '@/components/ui/button'
 import { getProjects } from '@/lib/airtable'
 
-
-export default async function Page({
-  // params,
-  // searchParams,
-}: {
-  params: Promise<object>
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
-}) {
+export default async function Page() {
   const projects = await getProjects()
   return <>
+    <ReturnButton href="/" label="Go home" />
     <h2 className="p-4 mb-8">
       Choose your project
     </h2>

@@ -4,6 +4,8 @@ import { type IDetectedBarcode, Scanner} from '@yudiel/react-qr-scanner'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
+import { CenteredContainer } from '@/components/CenteredContainer'
+
 const COMPONENT_UID_REGEX: RegExp = /[a-z]{3}-\d{6}/i
 // we allow any junk (e.g. query string) to be tagged onto the end of these URLs - validating on domain and UID is sufficient
 const PASSPORT_URL_PRODUCTION_REGEX = new RegExp(
@@ -34,7 +36,7 @@ export default function Page() {
   const [feedback, setFeedback] = useState('Scan the QR code on your component')
 
   // TODO: finesse the sizing on the scanner - it's a bit janky on some mobiles
-  return (<div className="flex flex-col flex-grow justify-center items-center space-y-4">
+  return (<CenteredContainer>
     {/* container for scanner limits how big it will grow (large scan portal looks weird) */}
     <div className="w-2/3 h-auto max-w-lg">
       <Scanner
@@ -63,7 +65,7 @@ export default function Page() {
       />
     </div>
     <p className="text-center">{feedback}</p>
-  </div>)
+  </CenteredContainer>)
 }
 
 
