@@ -32,7 +32,7 @@ export const AirtableAttachmentLink = ({
   } else {
     console.warn('Required IDs not passed to <AirtableAttachmentLink> - skipping renewal and falling back to supplied href')
   }
-    
+
   const { data: renewedHref, error, isLoading } = useSWR(url, fetcher,
     { 
       revalidateIfStale: true,
@@ -42,7 +42,7 @@ export const AirtableAttachmentLink = ({
       refreshInterval: AIRTABLE_ATTACHMENT_CACHE_SECONDS * 1000,
     }
   )
-
+  
   if (isLoading) {
     return <p> {text} </p>
   } else if (renewedHref) {

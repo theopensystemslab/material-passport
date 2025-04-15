@@ -42,7 +42,7 @@ export const downloadLabelsAction = async (options: DownloadLabelsOptions): Prom
     console.error('No project name provided')
     return null
   }
-  console.log(`Downloading all labels for project: ${projectName}`)
+  console.info(`Downloading all labels for project: ${projectName}`)
   const components = await getComponents()
   const projects = await getProjects()
   for (const component of components) {
@@ -52,7 +52,7 @@ export const downloadLabelsAction = async (options: DownloadLabelsOptions): Prom
       continue
     }
     if (project.projectName == projectName) {
-      console.log(`Downloading label for component ${component.componentUid} of project ${projectName}`)
+      console.info(`Downloading label for component ${component.componentUid} of project ${projectName}`)
       const res = await fetch(component.label[0])
       if (res.ok) {
         const dest = path.resolve(process.cwd(), 'tmp', `${component.componentUid}.pdf`)
@@ -165,7 +165,7 @@ export const addHistoryRecordAction = async (formData: FormData): Promise<void> 
   }
   // @ts-expect-error: see sync-orders.ts
   table.create([{fields: recordData}])
-  console.log(`New history record for component ${componentUid}`)
+  console.info(`New history record for component ${componentUid}`)
 
   const path = `/passport/${componentUid}`
   revalidatePath(path)

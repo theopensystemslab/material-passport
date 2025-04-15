@@ -62,6 +62,7 @@ export const GET = async (req: NextRequest): Promise<NextResponse> => {
         // NB. most fields in 'Components' are lookups to 'Order base', so don't need to be included here
         const newComponentRecord = await db.insert(componentsTable, {
           orderBase: [ order.id ],
+          project: order.project.slice(0, 1),
           status: order.status,
         })
         console.debug(`Record ${i + 1} of ${order.quantity} created with ID: ${newComponentRecord.id}`)
@@ -104,11 +105,11 @@ export const GET = async (req: NextRequest): Promise<NextResponse> => {
 
       // finally, mark the order as synced to avoid duplicating records on next run
       await db.update(orderBaseTable, { id: order.id, isSynced: true })
-      console.log(`Successfully created ${order.quantity} new component records from order ${order.orderRef}`)
+      console.info(`Successfully created ${order.quantity} new component records from order ${order.orderRef}`)
       ordersSynced++
     }
 
-    console.log(`Successfully synced ${ordersSynced} orders, creating ${recordsCreated} new component records`)
+    console.info(`Successfully synced ${ordersSynced} orders, creating ${recordsCreated} new component records`)
     console.debug(`Ignored ${ordersIgnored} orders due to being earlier than '${ComponentStatus.ReadyForProduction}' in lifecycle`)
     // response status code should indicate whether anything was actually created (201) or not (204)
     if (ordersSynced > 0) {

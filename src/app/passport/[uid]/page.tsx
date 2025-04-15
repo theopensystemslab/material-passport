@@ -85,6 +85,7 @@ import {
   getHistoryEventEnum,
   getLocationReprFromHistory,
   isBuildTime,
+  shouldShowRecord,
   truncate,
 } from '@/lib/utils'
 
@@ -101,7 +102,7 @@ const PDF_BLOB_FOLDER = process.env.NEXT_PUBLIC_PDF_BLOB_FOLDER
 const VERCEL_BLOB_STORE_URL = process.env.NEXT_PUBLIC_VERCEL_BLOB_STORE_URL
 
 // we use ISR to generate static passports at build time and fetch fresh data at request time as needed
-export const revalidate = 7200 // 2hrs
+export const revalidate = 7200
 
 // this runs once, at build time, to prepare static pages for every component
 export async function generateStaticParams(): Promise<{ uid: string }[]> {
@@ -116,9 +117,8 @@ export async function generateStaticParams(): Promise<{ uid: string }[]> {
   // wait for component scan to complete
   const components = await getComponentsPromise
   // ignore any records without UID (none should exist anyway)
-  // TODO: also filter out components which should not be on production
   return components
-    .filter((component) => isNotNil(component.componentUid))
+    .filter((component) => isNotNil(component.componentUid) && shouldShowRecord(component))
     .map((component) => ({ uid: component.componentUid as string }))
 }
 
@@ -133,7 +133,6 @@ export default async function Page({params}: {
   const { uid } = await params
 
   let component: Component | null = null
-  let componentStatus: ComponentStatus | null = null
   const history: History[] = []
   try {
     if (isBuildTime()) {
@@ -168,10 +167,7 @@ export default async function Page({params}: {
         ))
       }
     }
-    // run a type check and validate that we have the correct record
-    if (!component) {
-      throw new Error(`Failed to fetch component with UID ${uid}`)
-    }
+    // validate that we have the correct record
     if (component && component.componentUid !== uid) {
       throw new Error(`Fetched wrong record: ${component.componentUid} != ${uid}`)
     }
@@ -181,14 +177,20 @@ export default async function Page({params}: {
       console.debug('Ensuring history is sorted chronogically (i.e. ascending by time of creation)')
       history.sort((a: History, b: History) => a.createdAt - b.createdAt)
     }
-    // finally get enum for component status (and type check)
-    componentStatus = getComponentStatusEnum(component.status, { shouldThrow: true })
-    if (!componentStatus) {
-      throw new Error(`Component ${uid} has no status`)
-    }
-  } catch (e) {
-    console.error(e)
+  } catch (err) {
+    console.error(err)
+    throw err
+  }
+
+  if (!component || !shouldShowRecord(component)) {
+    console.debug(`Component ${uid} not found - returning 404`)
     notFound()
+  }
+
+  // finally get enum for component status (and type check)
+  const componentStatus = getComponentStatusEnum(component.status, { shouldThrow: true })
+  if (!componentStatus) {
+    throw new Error(`Component ${uid} has no status`)
   }
 
   // we also fetch related project, order, suppliers, library source and material records (but if any fail, we still render)
@@ -256,18 +258,6 @@ export default async function Page({params}: {
   } else {
     console.warn(`Component ${uid} has no associated fixings material`)
   }
-
-  // FIXME: remove these logs - just for dev purposes
-  // console.log('component', component)
-  // for (const record of history) {
-  //   console.log(`history record ${record.historyUid}:`, record)
-  // }
-  // console.log('project', project)
-  // console.log('order', order)
-  // console.log('block', block)
-  // for (const supplier of suppliers) {
-  //   console.log(`supplier ${supplier.supplierName}`, supplier)
-  // }
 
   // fix some variables here for expediency
   const mainImage = order?.mainImageCustom?.[0] || order?.mainImageFromLibrarySource?.[0]
@@ -474,18 +464,18 @@ export default async function Page({params}: {
                     </TableCell>
                   </TableRow>}
                   {assemblyFile && <TableRow>
-                    <TableCell className="font-medium">Assembly `manual`</TableCell>
+                    <TableCell className="font-medium">Assembly manual</TableCell>
                     <TableCell className="text-right">
-                      <AirtableAttachmentLink
+                      {order?.assemblyManualCustom?.[0] ? <AirtableAttachmentLink
                         tableId={orderBaseTable.tableId}
                         recordId={order.id}
-                        fieldId={order?.assemblyManualCustom?.[0]
-                          ? orderBaseTable.mappings?.assemblyManualCustom
-                          : orderBaseTable.mappings?.githubAssemblyGuideFromLibrarySource}
+                        fieldId={orderBaseTable.mappings?.assemblyManualCustom}
                         href={assemblyFile}
                         // custom assembly manuals are airtable attachments, so url is nonsense and should not be reproduced
-                        text={order?.assemblyManualCustom?.[0] ? 'Custom' : (truncate(assemblyFile.split('/').pop()) || 'Github')}
-                      />
+                        text="Custom"
+                      /> : <a href={assemblyFile} target="_blank">
+                        {truncate(assemblyFile.split('/').pop()) || 'Github'}
+                      </a>}
                     </TableCell>
                   </TableRow>}
                   {cuttingFile && <TableRow>

@@ -1,8 +1,8 @@
 import { isNotNil, kebabCase } from 'es-toolkit'
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
 import { JSX } from 'react'
 
-// import { Button } from '@/components/ui/button'
 import { ReturnButton } from '@/components/ReturnButton'
 import {
   Table,
@@ -17,13 +17,20 @@ import {
   getProjects,
   getRecordFromScan,
 } from '@/lib/airtable'
-import { type Project, projectsTable, } from '@/lib/schema'
-import { dekebab } from '@/lib/utils'
+import {
+  type Component,
+  type OrderBase,
+  type Project,
+  projectsTable
+} from '@/lib/schema'
+import { dekebab, shouldShowRecord } from '@/lib/utils'
+
+export const revalidate = 7200
 
 export async function generateStaticParams(): Promise<{ slug: string }[]> {
   const projects = await getProjects()
   return projects
-    .filter((project) => isNotNil(project.projectName))
+    .filter((project) => isNotNil(project.projectName) && shouldShowRecord(project))
     .map((project) => ({ slug: kebabCase(project.projectName) }))
 }
 
@@ -35,9 +42,25 @@ export default async function Page({params}: {
   const { slug } = await Promise.resolve(params)
   const projectName = dekebab(slug)
   const projectNameFieldName = getProjectFieldName(projectsTable.mappings?.projectName)
-  const project = await getRecordFromScan<Project>(getProjects, projectName, projectNameFieldName)
-  const components = await getComponents()
-  const orders = await getOrders()
+
+  let project: Project | null = null
+  let components: Component[] = []
+  let orders: OrderBase[] = []
+  try {
+    project = await getRecordFromScan<Project>(getProjects, projectName, projectNameFieldName)
+    components = await getComponents()
+    orders = await getOrders()
+  } catch (error) {
+    const msg = `Failed to fetch project ${projectName} - ${error}`
+    console.error(msg)
+    throw new Error(msg)
+  }
+
+  if (!project || !shouldShowRecord(project)) {
+    console.warn(`Project ${projectName} not found - returning 404`)
+    notFound()
+  }
+  
   const seenComponentTypes = new Set<string>()
   return <>
     <ReturnButton href="/project" label="Choose another project" />
@@ -55,7 +78,6 @@ export default async function Page({params}: {
             return (order &&
               <TableRow key={i}>
                 <TableCell>
-                  {/* TODO: link to component page instead of random passport (once it's built) */}
                   <Link href={`/project/${slug}/${order.orderRef}`}>
                     {componentType}
                   </Link>

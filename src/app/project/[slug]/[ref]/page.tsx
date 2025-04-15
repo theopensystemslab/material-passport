@@ -38,7 +38,6 @@ import {
   getRecordsFromScan,
   getSuppliers,
 } from '@/lib/airtable'
-import { ComponentStatus } from '@/lib/definitions'
 import {
   type AllBlock,
   type Component,
@@ -53,6 +52,7 @@ import {
   dekebab,
   getComponentStatusEnum,
   getTotalGwp,
+  shouldShowRecord,
   truncate,
 } from '@/lib/utils'
 
@@ -62,9 +62,8 @@ export const revalidate = 7200
 
 export async function generateStaticParams(): Promise<{ ref: string }[]> {
   const orders = await getOrders()
-  // TODO: filter for production-ready orders
   return orders
-    .filter((order) => isNotNil(order.orderRef))
+    .filter((order) => isNotNil(order.orderRef) && shouldShowRecord(order))
     .map((order) => ({ ref: order.orderRef as string }))
 }
 
@@ -79,7 +78,6 @@ export default async function Page({params}: {
   console.debug(`Attempting to build page for order ${ref} of project ${projectName}`)
 
   let order: OrderBase | null = null
-  let orderStatus: ComponentStatus | null = null
   try {
     if (process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD) {
       const orderRefFieldName = getOrderFieldName(orderBaseTable.mappings?.orderRef)
@@ -95,19 +93,22 @@ export default async function Page({params}: {
         ref,
         { shouldThrow: true },
       )}
-    if (!order) {
-      throw new Error(`Failed to fetch order with ref ${ref}`)
-    }
     if (order && order.orderRef !== ref) {
       throw new Error(`Fetched wrong record: ${order.orderRef} != ${ref}`)
     }
-    orderStatus = getComponentStatusEnum(order.status, { shouldThrow: true })
-    if (!orderStatus) {
-      throw new Error(`Order ${ref} has no status`)
-    }
-  } catch (e) {
-    console.error(e)
+  } catch (err) {
+    console.error(err)
+    throw err
+  }
+
+  if (!order || !shouldShowRecord(order)) {
+    console.debug(`Order ${ref} not found - returning 404`)
     notFound()
+  }
+
+  const orderStatus = getComponentStatusEnum(order.status, { shouldThrow: true })
+  if (!orderStatus) {
+    throw new Error(`Order ${ref} has no status`)
   }
 
   // since we expect multiple components in many cases, we use the scan rather than fetching them individually
@@ -178,17 +179,6 @@ export default async function Page({params}: {
       getMaterials, order.materialsFixings[0])
   } else {
     console.warn(`Order ${ref} has no associated fixings material`)
-  }
-
-  // FIXME: remove these logs - just for dev purposes
-  console.log('order', order)
-  for (const component of components) {
-    console.log(`history record ${component.componentUid}:`, component)
-  }
-  console.log('project', project)
-  console.log('block', block)
-  for (const supplier of suppliers) {
-    console.log(`supplier ${supplier.supplierName}`, supplier)
   }
 
   const mainImage = order?.mainImageCustom?.[0] || order?.mainImageFromLibrarySource?.[0]
@@ -380,15 +370,16 @@ export default async function Page({params}: {
                   <TableRow>
                     <TableCell className="font-medium">Assembly manual</TableCell>
                     <TableCell className="text-right">
-                      <AirtableAttachmentLink
+                      {order?.assemblyManualCustom?.[0] ? <AirtableAttachmentLink
                         tableId={orderBaseTable.tableId}
                         recordId={order.id}
-                        fieldId={order?.assemblyManualCustom?.[0]
-                          ? orderBaseTable.mappings?.assemblyManualCustom
-                          : orderBaseTable.mappings?.githubAssemblyGuideFromLibrarySource}
+                        fieldId={orderBaseTable.mappings?.assemblyManualCustom}
                         href={assemblyFile}
-                        text={order?.assemblyManualCustom?.[0] ? 'Custom' : (truncate(assemblyFile.split('/').pop()) || 'Github')}
-                      />
+                        // custom assembly manuals are airtable attachments, so url is nonsense and should not be reproduced
+                        text="Custom"
+                      /> : <a href={assemblyFile} target="_blank">
+                        {truncate(assemblyFile.split('/').pop()) || 'Github'}
+                      </a>}
                     </TableCell>
                   </TableRow>}
                   {cuttingFile && <TableRow>
