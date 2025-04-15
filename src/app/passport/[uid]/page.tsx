@@ -552,7 +552,11 @@ export default async function Page({params}: {
         // since we can't control button variant dynamically according to media query, we do it manually with similar classes
         component.label?.[0] && <Button variant="default" asChild className="rounded-md lg:h-10 lg:px-8 lg:py-4 lg:text-lg">
             {/* we can't have the pdf download directly on click since that is only permitted for same site origin */}
-            <a href={component.label[0]} target="_blank">
+            <a
+              // use permanent & predictable blob URL instead of short-lived airtable URL to serve label
+              href={`${VERCEL_BLOB_STORE_URL}/${PDF_BLOB_FOLDER}/${uid}.pdf?download=1`}
+              target="_blank"
+            >
               Download label
             </a>
           </Button>}

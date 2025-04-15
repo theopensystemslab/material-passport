@@ -16,8 +16,8 @@ import {
 import { getComponentStatusEnum } from '@/lib/utils'
 
 const MATERIAL_PASSPORT_DOMAIN = 'wikihouse.materialpassport.info'
-const QR_CODE_BLOB_FOLDER = 'qr-code'
-const PDF_BLOB_FOLDER = 'pdf'
+const QR_CODE_BLOB_FOLDER = process.env.NEXT_PUBLIC_QR_CODE_BLOB_FOLDER
+const PDF_BLOB_FOLDER = process.env.NEXT_PUBLIC_PDF_BLOB_FOLDER
 
 // nodejs is the default runtime (alternative being 'edge'), but we declare it explicitly for clarity
 export const runtime = 'nodejs'
@@ -74,6 +74,7 @@ export const GET = async (req: NextRequest): Promise<NextResponse> => {
         await generateQrPngStream(qrDuplexMemoryStream, passportUri)
         const qrBlob = await put(`${QR_CODE_BLOB_FOLDER}/${uid}.png`, qrDuplexMemoryStream, {
           access: 'public',
+          addRandomSuffix: false,
         })
         console.debug(`QR code for component ${uid} uploaded to blob store: ${qrBlob.url}`)
         // we take a similar approach for generating the pdf label, passing the newly generated QR code as png data image
@@ -81,6 +82,7 @@ export const GET = async (req: NextRequest): Promise<NextResponse> => {
         await writePdfToStream(pdfDuplexMemoryStream, newComponentRecord, qrDataImage)
         const pdfBlob = await put(`${PDF_BLOB_FOLDER}/${uid}.pdf`, pdfDuplexMemoryStream, {
           access: 'public',
+          addRandomSuffix: false,
         })
         console.debug(`PDF for component ${uid} uploaded to blob store: ${pdfBlob.url}`)
         // airtable-ts considers the qrCodePng field (of type Attachment) as readonly, so we use the classic SDK for this update
