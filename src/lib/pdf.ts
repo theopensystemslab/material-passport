@@ -64,7 +64,7 @@ export const writePdfToStream = async (
     }
     
     // using pdfkit over pdfmake because bundler problems looked more difficult to overcome for the latter (and silent!)
-    console.log(`Generating pdf for component ${uid}`)
+    console.info(`Generating pdf for component ${uid}`)
     const doc = new PDFDocument({
       // ISO A6 = 297.64 x 419.53 PostScript/DTP points (~105×148mm) - see https://pdfkit.org/docs/paper_sizes.html
       size: 'A6',

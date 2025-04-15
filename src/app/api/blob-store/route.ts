@@ -1,9 +1,11 @@
 // utility function to clean up blob store as and when
 // vendored from https://vercel.com/docs/vercel-blob#deleting-all-blobs
 import 'server-only'
-
 import { del, list } from '@vercel/blob'
 import { type NextRequest, NextResponse } from 'next/server'
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 export const GET = async (): Promise<NextResponse> => {
   return new NextResponse('This route expects a DELETE request', { status: 405 })

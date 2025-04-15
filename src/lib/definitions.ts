@@ -1,3 +1,6 @@
+// Airtable attachment/image URLs are only valid for 2hrs, so we always cache for / revalidate after 90 minutes
+export const AIRTABLE_ATTACHMENT_CACHE_SECONDS = 5400
+
 // this enum of possible statuses is non-exhaustive for the moment, and naming may not be final
 // any change here should also be reflected in the companion lookup logic in /helpers/utils.ts
 // since the possible values are currently identical, this doubles up as an 'OrderStatus' enum

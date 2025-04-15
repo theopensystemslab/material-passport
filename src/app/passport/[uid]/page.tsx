@@ -14,13 +14,13 @@ import {
   SquarePen,
   Truck
 } from 'lucide-react'
-import { PHASE_PRODUCTION_BUILD } from 'next/constants'
-import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { type JSX, Suspense } from 'react'
 
 import { AddRecordDialog } from '@/app/passport/[uid]/AddRecordDialog'
 import { StatusTransitionButtons } from '@/app/passport/[uid]/StatusTransitionButtons'
+import { AirtableAttachmentLink } from '@/components/AirtableAttachmentLink'
+import { AirtableImage } from '@/components/AirtableImage'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { ReturnButton } from '@/components/ReturnButton'
 import {
@@ -76,13 +76,17 @@ import {
   type Supplier,
   componentsTable,
   historyTable,
+  materialsTable,
+  orderBaseTable,
 } from '@/lib/schema'
 import {
   getComponentStatusEnum,
   getDateReprFromEpoch,
   getHistoryEventEnum,
   getLocationReprFromHistory,
-  truncate
+  isBuildTime,
+  shouldShowRecord,
+  truncate,
 } from '@/lib/utils'
 
 const MAX_DECIMAL_PLACE_PRECISION: number = 1
@@ -94,8 +98,11 @@ const ICON_BY_HISTORY_EVENT = {
   [HistoryEvent.Record]: SquarePen,
 }
 
-// we use ISR to generate static passports at build and fetch fresh data at request time as needed
-export const revalidate = 180
+const PDF_BLOB_FOLDER = process.env.NEXT_PUBLIC_PDF_BLOB_FOLDER
+const VERCEL_BLOB_STORE_URL = process.env.NEXT_PUBLIC_VERCEL_BLOB_STORE_URL
+
+// we use ISR to generate static passports at build time and fetch fresh data at request time as needed
+export const revalidate = 7200
 
 // this runs once, at build time, to prepare static pages for every component
 export async function generateStaticParams(): Promise<{ uid: string }[]> {
@@ -111,7 +118,7 @@ export async function generateStaticParams(): Promise<{ uid: string }[]> {
   const components = await getComponentsPromise
   // ignore any records without UID (none should exist anyway)
   return components
-    .filter((component) => isNotNil(component.componentUid))
+    .filter((component) => isNotNil(component.componentUid) && shouldShowRecord(component))
     .map((component) => ({ uid: component.componentUid as string }))
 }
 
@@ -126,10 +133,9 @@ export default async function Page({params}: {
   const { uid } = await params
 
   let component: Component | null = null
-  let componentStatus: ComponentStatus | null = null
   const history: History[] = []
   try {
-    if (process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD) {
+    if (isBuildTime()) {
       // if generating at build time, use cached scan of component and history tables
       const componentUidFieldName = getComponentFieldName(componentsTable.mappings?.componentUid)
       component = await getRecordFromScan<Component>(
@@ -161,10 +167,7 @@ export default async function Page({params}: {
         ))
       }
     }
-    // run a type check and validate that we have the correct record
-    if (!component) {
-      throw new Error(`Failed to fetch component with UID ${uid}`)
-    }
+    // validate that we have the correct record
     if (component && component.componentUid !== uid) {
       throw new Error(`Fetched wrong record: ${component.componentUid} != ${uid}`)
     }
@@ -174,14 +177,20 @@ export default async function Page({params}: {
       console.debug('Ensuring history is sorted chronogically (i.e. ascending by time of creation)')
       history.sort((a: History, b: History) => a.createdAt - b.createdAt)
     }
-    // finally get enum for component status (and type check)
-    componentStatus = getComponentStatusEnum(component.status, { shouldThrow: true })
-    if (!componentStatus) {
-      throw new Error(`Component ${uid} has no status`)
-    }
-  } catch (e) {
-    console.error(e)
+  } catch (err) {
+    console.error(err)
+    throw err
+  }
+
+  if (!component || !shouldShowRecord(component)) {
+    console.debug(`Component ${uid} not found - returning 404`)
     notFound()
+  }
+
+  // finally get enum for component status (and type check)
+  const componentStatus = getComponentStatusEnum(component.status, { shouldThrow: true })
+  if (!componentStatus) {
+    throw new Error(`Component ${uid} has no status`)
   }
 
   // we also fetch related project, order, suppliers, library source and material records (but if any fail, we still render)
@@ -250,18 +259,6 @@ export default async function Page({params}: {
     console.warn(`Component ${uid} has no associated fixings material`)
   }
 
-  // FIXME: remove these logs - just for dev purposes
-  // console.log('component', component)
-  // for (const record of history) {
-  //   console.log(`history record ${record.historyUid}:`, record)
-  // }
-  // console.log('project', project)
-  // console.log('order', order)
-  // console.log('block', block)
-  // for (const supplier of suppliers) {
-  //   console.log(`supplier ${supplier.supplierName}`, supplier)
-  // }
-
   // fix some variables here for expediency
   const mainImage = order?.mainImageCustom?.[0] || order?.mainImageFromLibrarySource?.[0]
   // custom assembly manual is an attachment, the rest are URLs
@@ -287,11 +284,16 @@ export default async function Page({params}: {
       {/* FIXME: resolve issue with airtable image URLs expiring after 2hrs (e.g. force revalidation at request time / store as blobs ?? */}
       {/* TODO: when we have no main image, use latest photo from history, if one exists */}
       <Card className="relative w-full h-64 lg:h-96 flex justify-center items-center">
-        {mainImage ? <Image
+        {mainImage && order ? <AirtableImage
+          tableId={orderBaseTable.tableId}
+          recordId={order.id}
+          fieldId={order?.mainImageCustom?.[0]
+            ? orderBaseTable.mappings?.mainImageCustom
+            : orderBaseTable.mappings?.mainImageFromLibrarySource}
           className="object-contain object-center rounded-md p-2"
           src={mainImage}
           alt={`Orthogonal diagram of ${component.componentName}`}
-          // images are svg so no need to optimise (alternatively we could set dangerouslyAllowSVG in next config)
+          // main images are svg so no need to optimise (alternatively we could set dangerouslyAllowSVG in next config)
           unoptimized
           priority
           fill
@@ -380,7 +382,10 @@ export default async function Page({params}: {
                     <TableCell>
                       <div className="relative w-6 h-6 lg:w-10 lg:h-10 flex justify-center items-center">
                         {materials.timber.thumbnail?.[0] ?
-                          <Image
+                          <AirtableImage
+                            tableId={materialsTable.tableId}
+                            recordId={materials.timber.id}
+                            fieldId={materialsTable.mappings?.thumbnail}
                             className="object-cover object-center rounded-full"
                             src={materials.timber.thumbnail[0]}
                             alt="Thumbnail of material used for timber"
@@ -398,7 +403,10 @@ export default async function Page({params}: {
                     <TableCell>
                       <div className="relative w-6 h-6 lg:w-10 lg:h-10 flex justify-center items-center">
                         {materials.insulation.thumbnail?.[0] ?
-                          <Image
+                          <AirtableImage
+                            tableId={materialsTable.tableId}
+                            recordId={materials.insulation.id}
+                            fieldId={materialsTable.mappings?.thumbnail}
                             className="object-cover object-center rounded-full"
                             src={materials.insulation.thumbnail[0]}
                             alt="Thumbnail of material used for insulation"
@@ -416,7 +424,10 @@ export default async function Page({params}: {
                     <TableCell>
                       <div className="relative w-6 h-6 lg:w-10 lg:h-10 flex justify-center items-center">
                         {materials.fixings.thumbnail?.[0] ?
-                          <Image
+                          <AirtableImage
+                            tableId={materialsTable.tableId}
+                            recordId={materials.fixings.id}
+                            fieldId={materialsTable.mappings?.thumbnail}
                             className="object-cover object-center rounded-full"
                             src={materials.fixings.thumbnail[0]}
                             alt="Thumbnail of material used for fixings"
@@ -452,15 +463,19 @@ export default async function Page({params}: {
                       </a>
                     </TableCell>
                   </TableRow>}
-                  {assemblyFile &&
-                  <TableRow>
+                  {assemblyFile && <TableRow>
                     <TableCell className="font-medium">Assembly manual</TableCell>
                     <TableCell className="text-right">
-                      <a href={assemblyFile} target="_blank">
-                        {/* custom assembly manuals are airtable attachment, so url is nonsense */}
-                        {order.assemblyManualCustom ? 'Custom' :
-                          (truncate(assemblyFile.split('/').pop()) || 'Github')}
-                      </a>
+                      {order?.assemblyManualCustom?.[0] ? <AirtableAttachmentLink
+                        tableId={orderBaseTable.tableId}
+                        recordId={order.id}
+                        fieldId={orderBaseTable.mappings?.assemblyManualCustom}
+                        href={assemblyFile}
+                        // custom assembly manuals are airtable attachments, so url is nonsense and should not be reproduced
+                        text="Custom"
+                      /> : <a href={assemblyFile} target="_blank">
+                        {truncate(assemblyFile.split('/').pop()) || 'Github'}
+                      </a>}
                     </TableCell>
                   </TableRow>}
                   {cuttingFile && <TableRow>
@@ -500,7 +515,10 @@ export default async function Page({params}: {
                         <TimelineTitle className="text-lg lg:text-xl font-semibold">{record.event}</TimelineTitle>
                         <TimelineDescription className="text-md lg:text-lg text-foreground">{record.description}</TimelineDescription>
                         {record.photo?.[0] && <div className="relative w-full h-64 lg:h-96">
-                          <Image
+                          <AirtableImage
+                            tableId={historyTable.tableId}
+                            recordId={record.id}
+                            fieldId={historyTable.mappings?.photo}
                             className="object-contain object-left rounded-sm py-4 max-w-full"
                             src={record.photo[0]}
                             alt={`Photo for history event ${lowerCase(record.event)}`}
@@ -552,7 +570,11 @@ export default async function Page({params}: {
         // since we can't control button variant dynamically according to media query, we do it manually with similar classes
         component.label?.[0] && <Button variant="default" asChild className="rounded-md lg:h-10 lg:px-8 lg:py-4 lg:text-lg">
             {/* we can't have the pdf download directly on click since that is only permitted for same site origin */}
-            <a href={component.label[0]} target="_blank">
+            <a
+              // use permanent & predictable blob URL instead of short-lived airtable URL to serve label
+              href={`${VERCEL_BLOB_STORE_URL}/${PDF_BLOB_FOLDER}/${uid}.pdf?download=1`}
+              target="_blank"
+            >
               Download label
             </a>
           </Button>}

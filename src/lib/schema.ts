@@ -79,6 +79,7 @@ export interface OrderBase extends Item {
   gwpFossil: number,
   components: string[],
   isSynced: boolean,
+  onProduction: boolean,
 }
 
 export const orderBaseTable: Table<OrderBase> = { // edit
@@ -160,6 +161,7 @@ export const orderBaseTable: Table<OrderBase> = { // edit
     gwpFossil: 'fldo3mo2FxXurQrVt',
     components: 'fldO2bUBLT6JzJIxi',
     isSynced: 'fldHXl8xaPFi6KNXr',
+    onProduction: 'fldKUteArWRPBKbwO',
   },
   schema: {
     orderRef: 'string',
@@ -236,6 +238,7 @@ export const orderBaseTable: Table<OrderBase> = { // edit
     gwpFossil: 'number',
     components: 'string[]',
     isSynced: 'boolean',
+    onProduction: 'boolean',
   },
 };
 
@@ -269,9 +272,10 @@ export interface Component extends Item {
   history: string[],
   totalDistanceTravelled: number,
   transportEmissionsFromFactory: number | null,
-  project: string[] | null,
   qrCodeBase64: string,
   label: string[],
+  project: string[],
+  onProduction: number | null,
 }
 
 export const componentsTable: Table<Component> = {
@@ -307,9 +311,10 @@ export const componentsTable: Table<Component> = {
     history: 'flde9DvkwiCOcWniL',
     totalDistanceTravelled: 'fldGmKSOm4ZYUR8b6',
     transportEmissionsFromFactory: 'fldG3uGXM3Xo5pFHM',
-    project: 'fldXXZQtedyrX4UYj',
     qrCodeBase64: 'fld3hGReWcrRvbaW1',
     label: 'fldLhOUUxzEjtYg1c',
+    project: 'fldY3A92cvkxudZ8W',
+    onProduction: 'fldi6sfzQXbBb8EMT',
   },
   schema: {
     componentUid: 'string | null',
@@ -340,9 +345,10 @@ export const componentsTable: Table<Component> = {
     history: 'string[]',
     totalDistanceTravelled: 'number',
     transportEmissionsFromFactory: 'number | null',
-    project: 'string[] | null',
     qrCodeBase64: 'string',
     label: 'string[]',
+    project: 'string[]',
+    onProduction: 'number | null',
   },
 };
 
@@ -394,6 +400,7 @@ export interface Project extends Item {
   id: string,
   projectName: string,
   projectRef: string,
+  components: string[],
   image: string[],
   notes: string,
   customer: string,
@@ -426,6 +433,7 @@ export interface Project extends Item {
   admin: string,
   simpleModel: string,
   simpleModelEmbed: string,
+  onProduction: number,
 }
 
 export const projectsTable: Table<Project> = {
@@ -435,6 +443,7 @@ export const projectsTable: Table<Project> = {
   mappings: {
     projectName: 'fldzddDDirnhd6gTd',
     projectRef: 'fldx5Eyb7n3q58BWn',
+    components: 'fldeiFZIqx2VqW8Mq',
     image: 'fldednnvhSUx8N5Ss',
     notes: 'fldN6HJzDSW655lR3',
     customer: 'fldqGVu6dI4fGZxOa',
@@ -467,10 +476,12 @@ export const projectsTable: Table<Project> = {
     admin: 'fldX2jvK5NqAdjvyC',
     simpleModel: 'fldXCzgNNPpbsxJE3',
     simpleModelEmbed: 'fldW2iaQ6Bxi1c6d1',
+    onProduction: 'fldLayMZURhREgypY',
   },
   schema: {
     projectName: 'string',
     projectRef: 'string',
+    components: 'string[]',
     image: 'string[]',
     notes: 'string',
     customer: 'string',
@@ -503,6 +514,7 @@ export const projectsTable: Table<Project> = {
     admin: 'string',
     simpleModel: 'string',
     simpleModelEmbed: 'string',
+    onProduction: 'number',
   },
 };
 

@@ -44,3 +44,5 @@ However, this schema needs to be maintained against the state of the Airtable ba
 - I had an issue which took several days to fix, to do with `pdfkit` trying to access files it needs to initiate (e.g. the `Helvetica.afm` font), but which Next was not bundling. This meant attempts to generate pdfs would fail. I first fixed this on local with the code in `src/lib/hacks.ts`, then with a more elegant solution involving custom Webpack config, but neither of these solutions translated to the production/Vercel build. _Finally_, I stumbled on the `serverExternalPackages` config option, which solves it everywhere in one line!
 
 - Component UIDs have a 6 digit serial number / counter, so won't overflow until 100,000 exist, while the history UIDs have 7 digits, which allows for 1mn records - i.e. 10 records per component - before we'd need to extend this system.
+
+- Caching and revalidation! Explain!

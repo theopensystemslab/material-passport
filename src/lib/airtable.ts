@@ -17,6 +17,7 @@ import type {
   ValueOf,
 } from '@/lib/definitions'
 import {
+  A4EmbodiedCarbon,
   type AllBlock,
   type Component,
   type History,
@@ -24,6 +25,7 @@ import {
   type OrderBase,
   type Project,
   type Supplier,
+  a4EmbodiedCarbonTable,
   allBlocksTable,
   componentsTable,
   historyTable,
@@ -75,6 +77,27 @@ export const getCachedScan = <I extends Item>(
       revalidate: revalidationSeconds,
     },
   )
+}
+
+// we give each scan a separate tag to enable us to clear cache on demand (using revalidateTag)
+export const getComponents = getCachedScan<Component>(componentsTable, SHORT_CACHE_REVALIDATE_TIME_SECONDS)
+export const getHistory = getCachedScan<History>(historyTable, SHORT_CACHE_REVALIDATE_TIME_SECONDS)
+export const getProjects = getCachedScan<Project>(projectsTable)
+export const getOrders = getCachedScan<OrderBase>(orderBaseTable)
+export const getMaterials = getCachedScan<Material>(materialsTable)
+export const getSuppliers = getCachedScan<Supplier>(suppliersTable)
+export const getBlocks = getCachedScan<AllBlock>(allBlocksTable)
+export const getA4EmbodiedCarbon = getCachedScan<A4EmbodiedCarbon>(a4EmbodiedCarbonTable)
+
+export const tableByTableIdLookup: Record<string, Table<Item>> = {
+  [allBlocksTable.tableId]: allBlocksTable,
+  [componentsTable.tableId]: componentsTable,
+  [historyTable.tableId]: historyTable,
+  [materialsTable.tableId]: materialsTable,
+  [orderBaseTable.tableId]: orderBaseTable,
+  [projectsTable.tableId]: projectsTable,
+  [suppliersTable.tableId]: suppliersTable,
+  [a4EmbodiedCarbonTable.tableId]: a4EmbodiedCarbonTable,
 }
 
 interface GetRecordOptions {
@@ -233,7 +256,6 @@ export const getRecordsByField = async <I extends Item>(
   return records
 }
 
-
 // we can use the mapping returned here to get field names from field IDs, which are less liable to change
 export const getReversedTableMapping = <T extends Table<I>, I extends Item>(
   table: T,
@@ -270,24 +292,43 @@ export const getFieldNameByFieldId = <I extends Item>(
 
 // we provide a factory for getting memoized field name lookups, to reduce repeated computations
 // this works because field IDs are unique and schema is static in repo
-export const getFieldNameMemoized = <I extends Item>(
+export const getMemoizedFieldNameGetter = <I extends Item>(
   table: Table<I>,
 ) => {
   // memoizer can only take functions with 0 or 1 args, so we close over given table
   return memoize((fieldId: string | Nil) => getFieldNameByFieldId(table, fieldId))
 }
 
-// we give each scan a separate tag to enable us to clear cache on demand (using revalidatePath)
-export const getComponents = getCachedScan<Component>(componentsTable, SHORT_CACHE_REVALIDATE_TIME_SECONDS)
-export const getHistory = getCachedScan<History>(historyTable, SHORT_CACHE_REVALIDATE_TIME_SECONDS)
-export const getProjects = getCachedScan<Project>(projectsTable)
-export const getOrders = getCachedScan<OrderBase>(orderBaseTable)
-export const getMaterials = getCachedScan<Material>(materialsTable)
-export const getSuppliers = getCachedScan<Supplier>(suppliersTable)
-export const getBlocks = getCachedScan<AllBlock>(allBlocksTable)
+// we also export memoized field name 'getters' for all tables for completeness
+export const getAllBlocksFieldName = getMemoizedFieldNameGetter<AllBlock>(allBlocksTable)
+export const getComponentFieldName = getMemoizedFieldNameGetter<Component>(componentsTable)
+export const getHistoryFieldName = getMemoizedFieldNameGetter<History>(historyTable)
+export const getMaterialFieldName = getMemoizedFieldNameGetter<Material>(materialsTable)
+export const getProjectFieldName = getMemoizedFieldNameGetter<Project>(projectsTable)
+export const getOrderFieldName = getMemoizedFieldNameGetter<OrderBase>(orderBaseTable)
+export const getSupplierFieldName = getMemoizedFieldNameGetter<Supplier>(suppliersTable)
+export const getA4EmbodiedCarbonFieldName = getMemoizedFieldNameGetter<A4EmbodiedCarbon>(a4EmbodiedCarbonTable)
 
-// we also export any memoized field name lookups we might need
-export const getComponentFieldName = getFieldNameMemoized(componentsTable)
-export const getHistoryFieldName = getFieldNameMemoized(historyTable)
-export const getProjectFieldName = getFieldNameMemoized(projectsTable)
-export const getOrderFieldName = getFieldNameMemoized(orderBaseTable)
+// we further create a lookup for getting the field name getter for an unknown table when given the ID
+const tableFieldNameGetterLookup: Record<string, (fieldId: string | Nil) => string | null> = {
+  [allBlocksTable.tableId]: getAllBlocksFieldName,
+  [componentsTable.tableId]: getComponentFieldName,
+  [historyTable.tableId]: getHistoryFieldName,
+  [materialsTable.tableId]: getMaterialFieldName,
+  [projectsTable.tableId]: getProjectFieldName,
+  [orderBaseTable.tableId]: getOrderFieldName,
+  [suppliersTable.tableId]: getSupplierFieldName,
+  [a4EmbodiedCarbonTable.tableId]: getA4EmbodiedCarbonFieldName,
+}
+
+export const getFieldNameForUnknownTable = <I extends Item>(
+  table: Table<I>,
+  fieldId: string,
+): TableMappingKeys<I> | null => {
+  const getFieldName = tableFieldNameGetterLookup[table.tableId]
+  if (!getFieldName) {
+    console.warn(`No field name getter found for table ${table.name}`)
+    return null
+  }
+  return getFieldName(fieldId) as TableMappingKeys<I>
+}

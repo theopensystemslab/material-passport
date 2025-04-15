@@ -1,15 +1,21 @@
 import { type ClassValue, clsx } from 'clsx'
 import { round } from 'es-toolkit'
+import { PHASE_PRODUCTION_BUILD } from 'next/constants'
 import { twMerge } from 'tailwind-merge'
-
 
 import {
   ComponentStatus,
   HistoryEvent,
   Nil
 } from '@/lib/definitions'
-import { History } from '@/lib/schema'
+import {
+  Component,
+  History,
+  OrderBase,
+  Project
+} from '@/lib/schema'
 
+const IS_PRODUCTION = process.env.IS_PRODUCTION
 const FILE_EXTENSION_REGEX: RegExp = /\.[^/.]+$/
 const MONTH_BY_INDEX: Record<number, string> = {
   0: 'Jan',
@@ -148,4 +154,25 @@ export const getTotalGwp = (
 ) => {
   if (!gwpTimber || !gwpInsulation || !sheetQuantity) return null
   return ((gwpTimber / (1/(1.22*2.44*0.018))) * sheetQuantity) + gwpInsulation
+}
+
+export const isBuildTime = (): boolean => {
+  return process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD
+}
+
+// we define a generic fetcher for use with SWR
+export const fetcher = (url: string) => fetch(url).then(res => {
+  if (!res.ok) {
+    throw new Error(`Failed to fetch URL: ${res.status} ${res.statusText}`)
+  }
+  return res.text()
+})
+
+export const shouldShowRecord = (record: Project | OrderBase | Component): boolean => {
+  // if not on production, we show all records
+  if (!IS_PRODUCTION) return true
+  // if the record has no field declaring whether is should be shown, we show it
+  if (!record.hasOwnProperty('onProduction')) return true
+  // otherwise we return the number (0, 1) as bool
+  return Boolean(record['onProduction'])
 }
