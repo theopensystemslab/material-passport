@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from 'clsx'
 import { round } from 'es-toolkit'
+import { PHASE_PRODUCTION_BUILD } from 'next/constants'
 import { twMerge } from 'tailwind-merge'
 
 
@@ -149,3 +150,15 @@ export const getTotalGwp = (
   if (!gwpTimber || !gwpInsulation || !sheetQuantity) return null
   return ((gwpTimber / (1/(1.22*2.44*0.018))) * sheetQuantity) + gwpInsulation
 }
+
+export const isBuildTime = (): boolean => {
+  return process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD
+}
+
+// we define a generic fetcher for use with SWR
+export const fetcher = (url: string) => fetch(url).then(res => {
+  if (!res.ok) {
+    throw new Error(`Failed to fetch URL: ${res.status} ${res.statusText}`)
+  }
+  return res.text()
+})

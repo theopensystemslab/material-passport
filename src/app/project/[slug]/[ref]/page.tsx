@@ -2,12 +2,12 @@ import { isNotNil, round } from 'es-toolkit'
 import { kebabCase } from 'es-toolkit/string'
 import { Image as ImageIcon } from 'lucide-react'
 import { PHASE_PRODUCTION_BUILD } from 'next/constants'
-import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { type JSX, Suspense } from 'react'
 
-// import { StatusTransitionButtons } from '@/app/passport/[uid]/StatusTransitionButtons'
+import { AirtableAttachmentLink } from '@/components/AirtableAttachmentLink'
+import { AirtableImage } from '@/components/AirtableImage'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { ReturnButton } from '@/components/ReturnButton'
 import {
@@ -46,6 +46,7 @@ import {
   type OrderBase,
   type Project,
   type Supplier,
+  materialsTable,
   orderBaseTable,
 } from '@/lib/schema'
 import {
@@ -57,11 +58,11 @@ import {
 
 const MAX_DECIMAL_PLACE_PRECISION: number = 1
 
-export const revalidate = 180
+export const revalidate = 7200
 
 export async function generateStaticParams(): Promise<{ ref: string }[]> {
   const orders = await getOrders()
-  // console.log('orders', orders)
+  // TODO: filter for production-ready orders
   return orders
     .filter((order) => isNotNil(order.orderRef))
     .map((order) => ({ ref: order.orderRef as string }))
@@ -211,7 +212,12 @@ export default async function Page({params}: {
         </div>
       </div>
       <Card className="relative w-full h-64 lg:h-96 flex justify-center items-center">
-        {mainImage ? <Image
+        {mainImage && order ? <AirtableImage
+          tableId={orderBaseTable.tableId}
+          recordId={order.id}
+          fieldId={order?.mainImageCustom?.[0]
+            ? orderBaseTable.mappings?.mainImageCustom
+            : orderBaseTable.mappings?.mainImageFromLibrarySource}
           className="object-contain object-center rounded-md p-2"
           src={mainImage}
           alt={`Orthogonal diagram of ${order.componentName}`}
@@ -264,16 +270,6 @@ export default async function Page({params}: {
                       {round(order.gwpBiogenic, MAX_DECIMAL_PLACE_PRECISION)}
                     </TableCell>
                   </TableRow>}
-                  {/* {isNotNil(component.totalDistanceTravelled) && <TableRow>
-                    <TableCell className="font-medium">Distance travelled</TableCell>
-                    <TableCell className="text-right">
-                      {round(component.totalDistanceTravelled, MAX_DECIMAL_PLACE_PRECISION)} <small>km</small>
-                    </TableCell>
-                  </TableRow>}
-                  {isNotNil(component.totalDistanceTravelled) && <TableRow>
-                    <TableCell className="font-medium">Transport emissions</TableCell>
-                    <TableCell className="text-right">{round(component.totalDistanceTravelled, MAX_DECIMAL_PLACE_PRECISION)}  <small>kgCO<sub>2</sub>e</small></TableCell>
-                  </TableRow>} */}
                 </TableBody>
               </Table>
             </AccordionContent>
@@ -299,7 +295,10 @@ export default async function Page({params}: {
                     <TableCell>
                       <div className="relative w-6 h-6 lg:w-10 lg:h-10 flex justify-center items-center">
                         {materials.timber.thumbnail?.[0] ?
-                          <Image
+                          <AirtableImage
+                            tableId={materialsTable.tableId}
+                            recordId={materials.timber.id}
+                            fieldId={materialsTable.mappings?.thumbnail}
                             className="object-cover object-center rounded-full"
                             src={materials.timber.thumbnail[0]}
                             alt="Thumbnail of material used for timber"
@@ -317,7 +316,10 @@ export default async function Page({params}: {
                     <TableCell>
                       <div className="relative w-6 h-6 lg:w-10 lg:h-10 flex justify-center items-center">
                         {materials.insulation.thumbnail?.[0] ?
-                          <Image
+                          <AirtableImage
+                            tableId={materialsTable.tableId}
+                            recordId={materials.insulation.id}
+                            fieldId={materialsTable.mappings?.thumbnail}
                             className="object-cover object-center rounded-full"
                             src={materials.insulation.thumbnail[0]}
                             alt="Thumbnail of material used for insulation"
@@ -335,7 +337,10 @@ export default async function Page({params}: {
                     <TableCell>
                       <div className="relative w-6 h-6 lg:w-10 lg:h-10 flex justify-center items-center">
                         {materials.fixings.thumbnail?.[0] ?
-                          <Image
+                          <AirtableImage
+                            tableId={materialsTable.tableId}
+                            recordId={materials.fixings.id}
+                            fieldId={materialsTable.mappings?.thumbnail}
                             className="object-cover object-center rounded-full"
                             src={materials.fixings.thumbnail[0]}
                             alt="Thumbnail of material used for fixings"
@@ -375,10 +380,15 @@ export default async function Page({params}: {
                   <TableRow>
                     <TableCell className="font-medium">Assembly manual</TableCell>
                     <TableCell className="text-right">
-                      <a href={assemblyFile} target="_blank">
-                        {order.assemblyManualCustom ? 'Custom' :
-                          (truncate(assemblyFile.split('/').pop()) || 'Github')}
-                      </a>
+                      <AirtableAttachmentLink
+                        tableId={orderBaseTable.tableId}
+                        recordId={order.id}
+                        fieldId={order?.assemblyManualCustom?.[0]
+                          ? orderBaseTable.mappings?.assemblyManualCustom
+                          : orderBaseTable.mappings?.githubAssemblyGuideFromLibrarySource}
+                        href={assemblyFile}
+                        text={order?.assemblyManualCustom?.[0] ? 'Custom' : (truncate(assemblyFile.split('/').pop()) || 'Github')}
+                      />
                     </TableCell>
                   </TableRow>}
                   {cuttingFile && <TableRow>

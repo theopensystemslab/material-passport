@@ -20,6 +20,9 @@ export enum HistoryEvent {
   Record = 'Record',
 }
 
+// Airtable attachment/image URLs are only valid for 2hrs, so we always cache for / revalidate after 90 minutes
+export const AIRTABLE_ATTACHMENT_CACHE_SECONDS = 5400
+
 // encode the possible transitions between statuses (sometimes there are multiple options)
 export const STATUS_TRANSITIONS: Record<ComponentStatus, ComponentStatus[]> = {
   [ComponentStatus.DesignInProgress]: [],

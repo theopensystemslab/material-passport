@@ -14,13 +14,13 @@ import {
   SquarePen,
   Truck
 } from 'lucide-react'
-import { PHASE_PRODUCTION_BUILD } from 'next/constants'
-import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { type JSX, Suspense } from 'react'
 
 import { AddRecordDialog } from '@/app/passport/[uid]/AddRecordDialog'
 import { StatusTransitionButtons } from '@/app/passport/[uid]/StatusTransitionButtons'
+import { AirtableAttachmentLink } from '@/components/AirtableAttachmentLink'
+import { AirtableImage } from '@/components/AirtableImage'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { ReturnButton } from '@/components/ReturnButton'
 import {
@@ -76,13 +76,16 @@ import {
   type Supplier,
   componentsTable,
   historyTable,
+  materialsTable,
+  orderBaseTable,
 } from '@/lib/schema'
 import {
   getComponentStatusEnum,
   getDateReprFromEpoch,
   getHistoryEventEnum,
   getLocationReprFromHistory,
-  truncate
+  isBuildTime,
+  truncate,
 } from '@/lib/utils'
 
 const MAX_DECIMAL_PLACE_PRECISION: number = 1
@@ -94,8 +97,11 @@ const ICON_BY_HISTORY_EVENT = {
   [HistoryEvent.Record]: SquarePen,
 }
 
-// we use ISR to generate static passports at build and fetch fresh data at request time as needed
-export const revalidate = 180
+const PDF_BLOB_FOLDER = process.env.NEXT_PUBLIC_PDF_BLOB_FOLDER
+const VERCEL_BLOB_STORE_URL = process.env.NEXT_PUBLIC_VERCEL_BLOB_STORE_URL
+
+// we use ISR to generate static passports at build time and fetch fresh data at request time as needed
+export const revalidate = 7200 // 2hrs
 
 // this runs once, at build time, to prepare static pages for every component
 export async function generateStaticParams(): Promise<{ uid: string }[]> {
@@ -110,6 +116,7 @@ export async function generateStaticParams(): Promise<{ uid: string }[]> {
   // wait for component scan to complete
   const components = await getComponentsPromise
   // ignore any records without UID (none should exist anyway)
+  // TODO: also filter out components which should not be on production
   return components
     .filter((component) => isNotNil(component.componentUid))
     .map((component) => ({ uid: component.componentUid as string }))
@@ -129,7 +136,7 @@ export default async function Page({params}: {
   let componentStatus: ComponentStatus | null = null
   const history: History[] = []
   try {
-    if (process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD) {
+    if (isBuildTime()) {
       // if generating at build time, use cached scan of component and history tables
       const componentUidFieldName = getComponentFieldName(componentsTable.mappings?.componentUid)
       component = await getRecordFromScan<Component>(
@@ -287,11 +294,16 @@ export default async function Page({params}: {
       {/* FIXME: resolve issue with airtable image URLs expiring after 2hrs (e.g. force revalidation at request time / store as blobs ?? */}
       {/* TODO: when we have no main image, use latest photo from history, if one exists */}
       <Card className="relative w-full h-64 lg:h-96 flex justify-center items-center">
-        {mainImage ? <Image
+        {mainImage && order ? <AirtableImage
+          tableId={orderBaseTable.tableId}
+          recordId={order.id}
+          fieldId={order?.mainImageCustom?.[0]
+            ? orderBaseTable.mappings?.mainImageCustom
+            : orderBaseTable.mappings?.mainImageFromLibrarySource}
           className="object-contain object-center rounded-md p-2"
           src={mainImage}
           alt={`Orthogonal diagram of ${component.componentName}`}
-          // images are svg so no need to optimise (alternatively we could set dangerouslyAllowSVG in next config)
+          // main images are svg so no need to optimise (alternatively we could set dangerouslyAllowSVG in next config)
           unoptimized
           priority
           fill
@@ -380,7 +392,10 @@ export default async function Page({params}: {
                     <TableCell>
                       <div className="relative w-6 h-6 lg:w-10 lg:h-10 flex justify-center items-center">
                         {materials.timber.thumbnail?.[0] ?
-                          <Image
+                          <AirtableImage
+                            tableId={materialsTable.tableId}
+                            recordId={materials.timber.id}
+                            fieldId={materialsTable.mappings?.thumbnail}
                             className="object-cover object-center rounded-full"
                             src={materials.timber.thumbnail[0]}
                             alt="Thumbnail of material used for timber"
@@ -398,7 +413,10 @@ export default async function Page({params}: {
                     <TableCell>
                       <div className="relative w-6 h-6 lg:w-10 lg:h-10 flex justify-center items-center">
                         {materials.insulation.thumbnail?.[0] ?
-                          <Image
+                          <AirtableImage
+                            tableId={materialsTable.tableId}
+                            recordId={materials.insulation.id}
+                            fieldId={materialsTable.mappings?.thumbnail}
                             className="object-cover object-center rounded-full"
                             src={materials.insulation.thumbnail[0]}
                             alt="Thumbnail of material used for insulation"
@@ -416,7 +434,10 @@ export default async function Page({params}: {
                     <TableCell>
                       <div className="relative w-6 h-6 lg:w-10 lg:h-10 flex justify-center items-center">
                         {materials.fixings.thumbnail?.[0] ?
-                          <Image
+                          <AirtableImage
+                            tableId={materialsTable.tableId}
+                            recordId={materials.fixings.id}
+                            fieldId={materialsTable.mappings?.thumbnail}
                             className="object-cover object-center rounded-full"
                             src={materials.fixings.thumbnail[0]}
                             alt="Thumbnail of material used for fixings"
@@ -452,15 +473,19 @@ export default async function Page({params}: {
                       </a>
                     </TableCell>
                   </TableRow>}
-                  {assemblyFile &&
-                  <TableRow>
-                    <TableCell className="font-medium">Assembly manual</TableCell>
+                  {assemblyFile && <TableRow>
+                    <TableCell className="font-medium">Assembly `manual`</TableCell>
                     <TableCell className="text-right">
-                      <a href={assemblyFile} target="_blank">
-                        {/* custom assembly manuals are airtable attachment, so url is nonsense */}
-                        {order.assemblyManualCustom ? 'Custom' :
-                          (truncate(assemblyFile.split('/').pop()) || 'Github')}
-                      </a>
+                      <AirtableAttachmentLink
+                        tableId={orderBaseTable.tableId}
+                        recordId={order.id}
+                        fieldId={order?.assemblyManualCustom?.[0]
+                          ? orderBaseTable.mappings?.assemblyManualCustom
+                          : orderBaseTable.mappings?.githubAssemblyGuideFromLibrarySource}
+                        href={assemblyFile}
+                        // custom assembly manuals are airtable attachments, so url is nonsense and should not be reproduced
+                        text={order?.assemblyManualCustom?.[0] ? 'Custom' : (truncate(assemblyFile.split('/').pop()) || 'Github')}
+                      />
                     </TableCell>
                   </TableRow>}
                   {cuttingFile && <TableRow>
@@ -500,7 +525,10 @@ export default async function Page({params}: {
                         <TimelineTitle className="text-lg lg:text-xl font-semibold">{record.event}</TimelineTitle>
                         <TimelineDescription className="text-md lg:text-lg text-foreground">{record.description}</TimelineDescription>
                         {record.photo?.[0] && <div className="relative w-full h-64 lg:h-96">
-                          <Image
+                          <AirtableImage
+                            tableId={historyTable.tableId}
+                            recordId={record.id}
+                            fieldId={historyTable.mappings?.photo}
                             className="object-contain object-left rounded-sm py-4 max-w-full"
                             src={record.photo[0]}
                             alt={`Photo for history event ${lowerCase(record.event)}`}

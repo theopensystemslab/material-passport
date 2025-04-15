@@ -26,7 +26,7 @@ import {
 } from '@/lib/definitions'
 import { componentsTable, historyTable } from '@/lib/schema'
 
-const PHOTO_BLOB_FOLDER = 'photo'
+const PHOTO_BLOB_FOLDER = process.env.NEXT_PUBLIC_PHOTO_BLOB_FOLDER
 
 interface DownloadLabelsOptions {
   projectName?: string | Nil;
@@ -84,8 +84,9 @@ export const changeComponentStatusAction = async (
     })
   }
   // now we revalidate (delete cache) of the relevant passport, and redirect the user to force a refresh
-  revalidatePath(`/passport/${uid}`)
-  redirect(`/passport/${uid}`)
+  const path = `/passport/${uid}`
+  revalidatePath(path)
+  redirect(path)
 }
 
 interface PartialHistoryRecord {
@@ -129,7 +130,6 @@ export const addHistoryRecordAction = async (formData: FormData): Promise<void> 
   
   let blobUrl: string | null = null
   if (fileBuffer) {
-    console.debug('WE GOT HERE #2')
     try {
       // we just need a short random string to ensure temporary unique filenames (does not need to be crypto-secure)
       const nanoid = customAlphabet(alphanumeric, 6)
@@ -167,6 +167,7 @@ export const addHistoryRecordAction = async (formData: FormData): Promise<void> 
   table.create([{fields: recordData}])
   console.log(`New history record for component ${componentUid}`)
 
-  revalidatePath(`/passport/${componentUid}`)
-  redirect(`/passport/${componentUid}`)
+  const path = `/passport/${componentUid}`
+  revalidatePath(path)
+  redirect(path)
 }
