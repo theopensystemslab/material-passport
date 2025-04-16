@@ -35,34 +35,53 @@ export default function Page() {
   const router = useRouter()
   const [feedback, setFeedback] = useState('Scan the QR code on your component')
 
-  // TODO: finesse the sizing on the scanner - it's a bit janky on some mobiles
   return (<CenteredContainer>
     {/* container for scanner limits how big it will grow (large scan portal looks weird) */}
-    <div className="w-2/3 h-auto max-w-lg">
-      <Scanner
+    <div className="w-full max-w-sm mx-auto relative lg:max-w-lg">
+      <div className="aspect-square w-full">
+        <Scanner
         // ignore any barcode format that is not a QR code
-        // TODO: make sure the scanner fits in small screens
-        formats={['qr_code']}
-        allowMultiple={false}
-        scanDelay={1000}
-        onScan={(result: IDetectedBarcode[]): void => {
-          for (const qrCode of result) {
-            console.debug(`Scanned QR: ${qrCode.rawValue}`)
-            if (qrCode.rawValue && validatePassportUrl(qrCode.rawValue)) {
-              const uid = extractUidFromUrl(qrCode.rawValue)
-              if (uid) {
-              // if scanned QR encodes a valid passport URI/URL, and we can extract the UID, we navigate there
-                router.push(`/passport/${uid}`)
-              } else {
-                setFeedback(`Found component ID ${uid}, but expected something like 'ABC-123456'`)
-              }
-            } else {
-              setFeedback('QR code doesn\'t look like a Material Passport URI 🤔')
+          formats={['qr_code']}
+          allowMultiple={false}
+          scanDelay={1000}
+          constraints={{
+            facingMode: 'environment',
+            aspectRatio: 1
+          }}
+          styles={{
+            container: {
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              position: 'relative'
+            },
+            video: {
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover'
             }
-          }
-        }}
-        onError={console.error}
-      />
+          }}
+          onScan={(result: IDetectedBarcode[]): void => {
+            for (const qrCode of result) {
+              console.debug(`Scanned QR: ${qrCode.rawValue}`)
+              if (qrCode.rawValue && validatePassportUrl(qrCode.rawValue)) {
+                const uid = extractUidFromUrl(qrCode.rawValue)
+                if (uid) {
+                  // if scanned QR encodes a valid passport URI/URL, and we can extract the UID, we navigate there
+                  router.push(`/passport/${uid}`)
+                } else {
+                  setFeedback(`Found component ID ${uid}, but expected something like 'ABC-123456'`)
+                }
+              } else {
+                setFeedback('QR code doesn\'t look like a Material Passport URI 🤔')
+              }
+            }
+          }}
+          onError={console.error}
+        />
+      </div>
     </div>
     <p className="text-center">{feedback}</p>
   </CenteredContainer>)
