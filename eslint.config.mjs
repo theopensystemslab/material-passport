@@ -1,10 +1,15 @@
+import { createRequire } from 'module'
 import { dirname } from 'path'
 import { fileURLToPath } from 'url'
 
-import { FlatCompat } from '@eslint/eslintrc'
 import stylistic from '@stylistic/eslint-plugin'
+import prettier from 'eslint-config-prettier'
 import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript'
 import importNewlines from 'eslint-plugin-import-newlines'
+import { flatConfigs as importXFlatConfigs } from 'eslint-plugin-import-x'
+
+const require = createRequire(import.meta.url)
+const { FlatCompat } = require('@eslint/eslintrc')
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -14,13 +19,11 @@ const compat = new FlatCompat({
 })
 
 const eslintConfig = [
-  ...compat.extends(
-    'next/core-web-vitals',
-    'next/typescript',
-    'prettier',
-    'plugin:import-x/recommended',
-    'plugin:import-x/typescript',
-  ),
+  ...compat.extends('next/core-web-vitals'),
+  ...compat.extends('next/typescript'),
+  prettier,
+  importXFlatConfigs.recommended,
+  importXFlatConfigs.typescript,
   {
     plugins: {
       'import-newlines': importNewlines,
@@ -44,7 +47,7 @@ const eslintConfig = [
       // see: https://medium.com/weekly-webtips/how-to-sort-imports-like-a-pro-in-typescript-4ee8afd7258a
       'import-x/no-unresolved': 'error',
       'import-x/order': ['warn', {
-        'groups': [
+        groups: [
           'builtin',
           'external',
           'internal',
@@ -53,7 +56,7 @@ const eslintConfig = [
           'unknown',
         ],
         'newlines-between': 'always',
-        'alphabetize': {
+        alphabetize: {
           order: 'asc',
           caseInsensitive: true,
         },
@@ -67,6 +70,9 @@ const eslintConfig = [
         })
       ]
     }
+  },
+  {
+    ignores: ['node_modules/**', '.next/**', 'out/**', 'build/**', 'next-env.d.ts']
   }
 ]
 
