@@ -16,27 +16,27 @@ export interface OrderBase extends Item {
   quantity: number,
   type: string,
   customisation: string,
-  librarySource: string[],
+  librarySource: string,
   mainImageFromLibrarySource: string[],
   mainImageCustom: string[],
   latestReleaseFromLibrarySource: string,
   skylarkSeriesFromLibrarySource: string[],
   sheetQuantityFromLibrarySource: string,
-  sheetQuantityCustom: number | null, // edit
-  sheetQuantityPerBlock: number,
+  sheetQuantityCustom: number | null,
+  sheetQuantityPerBlock: number | null,
   insulationQuantityFromLibrarySource: string,
-  insulationQuantityCustom: number | null, // edit
-  insulationQuantityPerBlock: number | null, // edit
+  insulationQuantityCustom: number | null,
+  insulationQuantityPerBlock: number | null,
   materialsTimber: string[],
-  materialsInsulation: string[],
-  materialsFixings: string[],
+  materialsInsulation: string,
+  materialsFixings: string,
   cuttingFilesCustom: string,
   assemblyManualCustom: string[],
   massPerBlock: number,
   densityFromMaterialsTimber: string,
   densityFromMaterialsInsulation: string,
-  gwpFromMaterialsTimber: number,
-  gwpFromMaterialsInsulation: number | null, // edit
+  gwpFromMaterialsTimber: number | null,
+  gwpFromMaterialsInsulation: number | null,
   githubModelDetailedFromLibrarySource: string,
   githubAssemblyGuideFromLibrarySource: string,
   githubCuttingFileFromLibrarySource: string,
@@ -48,9 +48,9 @@ export interface OrderBase extends Item {
   heightMmFromLibrarySource: string,
   lengthMmFromLibrarySource: string,
   widthMmFromLibrarySource: string,
-  heightCustomMm: number | null, // edit
-  lengthCustomMm: number | null, // edit
-  widthCustomMm: number | null, // edit
+  heightCustomMm: number | null,
+  lengthCustomMm: number | null,
+  widthCustomMm: number | null,
   massInsulation: number,
   projectRef: string,
   totalInsulation: number,
@@ -60,9 +60,9 @@ export interface OrderBase extends Item {
   unitFromMaterialsTimber: string,
   sheetCostPerBlock: number,
   insulationCostPerBlock: number,
-  grossCost: number,
+  grossCost: number | null,
   whPlatformFee: number,
-  totalCost: number,
+  totalCost: number  | null,
   gwpTotal: number,
   machiningTime: number,
   workshopLabourRate: string,
@@ -175,27 +175,27 @@ export const orderBaseTable: Table<OrderBase> = { // edit
     quantity: 'number',
     type: 'string',
     customisation: 'string',
-    librarySource: 'string[]',
+    librarySource: 'string',
     mainImageFromLibrarySource: 'string[]',
     mainImageCustom: 'string[]',
     latestReleaseFromLibrarySource: 'string',
     skylarkSeriesFromLibrarySource: 'string[]',
     sheetQuantityFromLibrarySource: 'string',
-    sheetQuantityCustom: 'number | null', // edit
-    sheetQuantityPerBlock: 'number',
+    sheetQuantityCustom: 'number | null',
+    sheetQuantityPerBlock: 'number | null',
     insulationQuantityFromLibrarySource: 'string',
-    insulationQuantityCustom: 'number | null', // edit
-    insulationQuantityPerBlock: 'number | null', // edit
+    insulationQuantityCustom: 'number | null',
+    insulationQuantityPerBlock: 'number | null',
     materialsTimber: 'string[]',
-    materialsInsulation: 'string[]',
-    materialsFixings: 'string[]',
+    materialsInsulation: 'string',
+    materialsFixings: 'string',
     cuttingFilesCustom: 'string',
     assemblyManualCustom: 'string[]',
     massPerBlock: 'number',
     densityFromMaterialsTimber: 'string',
     densityFromMaterialsInsulation: 'string',
-    gwpFromMaterialsTimber: 'number',
-    gwpFromMaterialsInsulation: 'number | null', // edit
+    gwpFromMaterialsTimber: 'number | null',
+    gwpFromMaterialsInsulation: 'number | null',
     githubModelDetailedFromLibrarySource: 'string',
     githubAssemblyGuideFromLibrarySource: 'string',
     githubCuttingFileFromLibrarySource: 'string',
@@ -207,9 +207,9 @@ export const orderBaseTable: Table<OrderBase> = { // edit
     heightMmFromLibrarySource: 'string',
     lengthMmFromLibrarySource: 'string',
     widthMmFromLibrarySource: 'string',
-    heightCustomMm: 'number | null', // edit
-    lengthCustomMm: 'number | null', // edit
-    widthCustomMm: 'number | null', // edit
+    heightCustomMm: 'number | null',
+    lengthCustomMm: 'number | null',
+    widthCustomMm: 'number | null',
     massInsulation: 'number',
     projectRef: 'string',
     totalInsulation: 'number',
@@ -219,9 +219,9 @@ export const orderBaseTable: Table<OrderBase> = { // edit
     unitFromMaterialsTimber: 'string',
     sheetCostPerBlock: 'number',
     insulationCostPerBlock: 'number',
-    grossCost: 'number',
+    grossCost: 'number | null',
     whPlatformFee: 'number',
-    totalCost: 'number',
+    totalCost: 'number | null',
     gwpTotal: 'number',
     machiningTime: 'number',
     workshopLabourRate: 'string',
@@ -249,7 +249,7 @@ export interface Component extends Item {
   componentName: string | null,
   customisation: string | null,
   status: string,
-  librarySource: string[] | null,
+  librarySource: string | null,
   qrCodePng: string[],
   manufacturer: string[] | null,
   manufacturerRef: string | null,
@@ -260,12 +260,12 @@ export interface Component extends Item {
   materialsTimber: string[] | null,
   gwpFromMaterialsTimber: number | null,
   sheetQuantity: number | null,
-  materialsInsulation: string[] | null,
+  materialsInsulation: string | null,
   gwpFromMaterialsInsulation: number | null,
   insulationQuantity: number | null,
   totalGwp: number | null,
   totalMass: number | null,
-  materialsFixings: string[] | null,
+  materialsFixings: string | null,
   createdAt: number,
   lastModifiedAt: number,
   notes: string,
@@ -322,7 +322,7 @@ export const componentsTable: Table<Component> = {
     componentName: 'string | null',
     customisation: 'string | null',
     status: 'string',
-    librarySource: 'string[] | null',
+    librarySource: 'string | null',
     qrCodePng: 'string[]',
     manufacturer: 'string[] | null',
     manufacturerRef: 'string | null',
@@ -333,12 +333,12 @@ export const componentsTable: Table<Component> = {
     materialsTimber: 'string[] | null',
     gwpFromMaterialsTimber: 'number | null',
     sheetQuantity: 'number | null',
-    materialsInsulation: 'string[] | null',
+    materialsInsulation: 'string | null',
     gwpFromMaterialsInsulation: 'number | null',
     insulationQuantity: 'number | null',
     totalGwp: 'number | null',
     totalMass: 'number | null',
-    materialsFixings: 'string[] | null',
+    materialsFixings: 'string | null',
     createdAt: 'number',
     lastModifiedAt: 'number',
     notes: 'string',
@@ -357,11 +357,11 @@ export interface History extends Item {
   historyUid: string | null,
   component: string[],
   event: string,
-  latitude: number | null, // edit
-  longitude: number | null, // edit
-  description: string | null, // edit
+  latitude: number | null,
+  longitude: number | null,
+  description: string | null,
   photo: string[],
-  distancedTravelled: number | null, // edit
+  distancedTravelled: number | null,
   serial: number,
   createdAt: number,
 }
@@ -386,11 +386,11 @@ export const historyTable: Table<History> = {
     historyUid: 'string | null',
     component: 'string[]',
     event: 'string',
-    latitude: 'number | null', // edit
-    longitude: 'number | null', // edit
-    description: 'string | null', // edit
+    latitude: 'number | null',
+    longitude: 'number | null',
+    description: 'string | null',
     photo: 'string[]',
-    distancedTravelled: 'number | null', // edit
+    distancedTravelled: 'number | null',
     serial: 'number',
     createdAt: 'number',
   },
@@ -403,26 +403,24 @@ export interface Project extends Item {
   components: string[],
   image: string[],
   notes: string,
-  customer: string,
   location: string,
   latitude: string,
   longitude: string,
-  gIA: number | null, // edit
+  gIA: number | null,
   supplier: string[],
-  supplierDomainFromSupplier: string,
   supplierRef: string,
   machiningRateFromSupplier: string,
   workshopLabourRateFromSupplier: string,
-  machiningRateCustom: number | null, // edit
-  workshopLabourRateCustom: number | null, // edit
-  machiningRate: number | null, // edit
-  workshopRate: number | null, // edit
+  machiningRateCustom: number | null,
+  workshopLabourRateCustom: number | null,
+  machiningRate: number | null,
+  workshopRate: number | null,
   status: string,
-  productionStartDate: number | null, // edit
-  deliveryDate: number | null, // edit
-  chassisCompletionDate: number | null, // edit
+  productionStartDate: number | null,
+  deliveryDate: number | null,
+  chassisCompletionDate: number | null,
   totalChassisCost: number,
-  totalChassisEstimate: number,
+  totalChassisEstimate: string,
   totalPlatformFee: number,
   totalMassFromOrderBase: number,
   totalGwpFromOrderBase: number,
@@ -446,13 +444,11 @@ export const projectsTable: Table<Project> = {
     components: 'fldeiFZIqx2VqW8Mq',
     image: 'fldednnvhSUx8N5Ss',
     notes: 'fldN6HJzDSW655lR3',
-    customer: 'fldqGVu6dI4fGZxOa',
     location: 'fldBVvj7NvmAVhQVx',
     latitude: 'fldjSUM3gghzG1Z2S',
     longitude: 'fldocfLi5KkPNKiln',
     gIA: 'fld3cKcB4CJyiSoel',
     supplier: 'fldRClvftwvUmDtjQ',
-    supplierDomainFromSupplier: 'fldHcnuJQfbiOFmuS',
     supplierRef: 'fld1vnP0gqBOlMhWr',
     machiningRateFromSupplier: 'fldInxWK9c6Y17Bkk',
     workshopLabourRateFromSupplier: 'flduzpOayLNCBEhEW',
@@ -484,26 +480,24 @@ export const projectsTable: Table<Project> = {
     components: 'string[]',
     image: 'string[]',
     notes: 'string',
-    customer: 'string',
     location: 'string',
     latitude: 'string',
     longitude: 'string',
-    gIA: 'number | null', // edit
+    gIA: 'number | null',
     supplier: 'string[]',
-    supplierDomainFromSupplier: 'string',
     supplierRef: 'string',
     machiningRateFromSupplier: 'string',
     workshopLabourRateFromSupplier: 'string',
-    machiningRateCustom: 'number | null', // edit
-    workshopLabourRateCustom: 'number | null', // edit
-    machiningRate: 'number | null', // edit
-    workshopRate: 'number | null', // edit
+    machiningRateCustom: 'number | null',
+    workshopLabourRateCustom: 'number | null',
+    machiningRate: 'number | null',
+    workshopRate: 'number | null',
     status: 'string',
-    productionStartDate: 'number | null', // edit
-    deliveryDate: 'number | null', // edit
-    chassisCompletionDate: 'number | null', // edit
+    productionStartDate: 'number | null',
+    deliveryDate: 'number | null',
+    chassisCompletionDate: 'number | null',
     totalChassisCost: 'number',
-    totalChassisEstimate: 'number',
+    totalChassisEstimate: 'string',
     totalPlatformFee: 'number',
     totalMassFromOrderBase: 'number',
     totalGwpFromOrderBase: 'number',
@@ -527,9 +521,9 @@ export interface Supplier extends Item {
   supplierDomain: string,
   location: string,
   country: string,
-  machiningRate: number | null, // edit
-  workshopLabourRate: number | null, // edit
-  dateRegistered: number | null, // edit
+  machiningRate: number | null,
+  workshopLabourRate: number | null,
+  dateRegistered: number | null,
   website: string,
   complianceCertifications: string,
   logo: string[],
@@ -572,9 +566,9 @@ export const suppliersTable: Table<Supplier> = {
     supplierDomain: 'string',
     location: 'string',
     country: 'string',
-    machiningRate: 'number | null', // edit
-    workshopLabourRate: 'number | null', // edit
-    dateRegistered: 'number | null', // edit
+    machiningRate: 'number | null',
+    workshopLabourRate: 'number | null',
+    dateRegistered: 'number | null',
     website: 'string',
     complianceCertifications: 'string',
     logo: 'string[]',
@@ -594,17 +588,14 @@ export interface Material extends Item {
   description: string,
   thumbnail: string[],
   originLocation: string,
-  density: number,
-  gwpTotal: number | null, // edit
-  gwpBiogenic: number | null, // edit
-  gwpFossil: number | null, // edit
+  density: number | null,
+  gwpTotal: number | null,
+  gwpBiogenic: number | null,
+  gwpFossil: number | null,
   costPerUnit: number,
   unit: string,
-  environmentalCertification: boolean,
   ePD: string,
   orderBase: string[],
-  orderBase2: string[],
-  orderBase3: string[],
 }
 
 export const materialsTable: Table<Material> = {
@@ -624,11 +615,8 @@ export const materialsTable: Table<Material> = {
     gwpFossil: 'fldbGBEEGAy3zElhb',
     costPerUnit: 'fldNaZYfC7R4zKgPM',
     unit: 'fldiZfY1WvGdrL8QK',
-    environmentalCertification: 'fldZWfqb56h1DyIvD',
     ePD: 'fldoGbOQ8jV8hDjB7',
     orderBase: 'fldheCfppNloBuugP',
-    orderBase2: 'fldyJ5AWLj7v2LlYK',
-    orderBase3: 'fldXJmxWoooZ7szC8',
   },
   schema: {
     materialName: 'string',
@@ -637,17 +625,14 @@ export const materialsTable: Table<Material> = {
     description: 'string',
     thumbnail: 'string[]',
     originLocation: 'string',
-    density: 'number',
-    gwpTotal: 'number | null', // edit
-    gwpBiogenic: 'number | null', // edit
-    gwpFossil: 'number | null', // edit
+    density: 'number | null',
+    gwpTotal: 'number | null',
+    gwpBiogenic: 'number | null',
+    gwpFossil: 'number | null',
     costPerUnit: 'number',
     unit: 'string',
-    environmentalCertification: 'boolean',
     ePD: 'string',
     orderBase: 'string[]',
-    orderBase2: 'string[]',
-    orderBase3: 'string[]',
   },
 };
 
@@ -686,16 +671,16 @@ export interface AllBlock extends Item {
   insulationCost: number,
   fixings: string,
   costPerUnitFromFixings: string,
-  fixingsQuantity: number | null, // edit
+  fixingsQuantity: number | null,
   fixingsCost: number,
-  estAssemblyTimePersonHrs: number | null, // edit
+  estAssemblyTimePersonHrs: number | null,
   assemblyRate: string,
   costPerUnitFromRef: string,
   assemblyCost: number,
   platformContribution: number,
   materialsCost: number,
   manufacturingCost: number,
-  totalCost: number,
+  totalCost: number | null,
   embodiedCarbonGwpKgco2Eq: number,
   partsString: string,
   partsList: string,
@@ -704,7 +689,7 @@ export interface AllBlock extends Item {
   githubModelSimple: string,
   githubModelDetailed: string,
   status: string,
-  orderList: string[],
+  orderList: string,
   orderBaseCopy: string,
 }
 
@@ -801,16 +786,16 @@ export const allBlocksTable: Table<AllBlock> = { // edit
     insulationCost: 'number',
     fixings: 'string',
     costPerUnitFromFixings: 'string',
-    fixingsQuantity: 'number | null', // edit
+    fixingsQuantity: 'number | null',
     fixingsCost: 'number',
-    estAssemblyTimePersonHrs: 'number | null', // edit
+    estAssemblyTimePersonHrs: 'number | null',
     assemblyRate: 'string',
     costPerUnitFromRef: 'string',
     assemblyCost: 'number',
     platformContribution: 'number',
     materialsCost: 'number',
     manufacturingCost: 'number',
-    totalCost: 'number',
+    totalCost: 'number | null',
     embodiedCarbonGwpKgco2Eq: 'number',
     partsString: 'string',
     partsList: 'string',
@@ -819,7 +804,7 @@ export const allBlocksTable: Table<AllBlock> = { // edit
     githubModelSimple: 'string',
     githubModelDetailed: 'string',
     status: 'string',
-    orderList: 'string[]',
+    orderList: 'string',
     orderBaseCopy: 'string',
   },
 };
